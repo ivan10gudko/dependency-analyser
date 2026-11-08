@@ -1,12 +1,12 @@
 import type { ModuleId } from "../project/types";
 
 /**
- * Result of AST analysis for one file.
- * `importSpecifiers` are literal strings from source; targets are not resolved.
+ * One source file and the project modules it imports.
+ * Each dependency is a module id, the same string as `AnalyzedModule.path`.
  */
 export interface AnalyzedModule {
   path: ModuleId;
-  importSpecifiers: string[];
+  dependencies: ModuleId[];
 }
 
 export interface AnalyzeModuleSkipped {

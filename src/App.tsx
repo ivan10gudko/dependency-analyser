@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import { toProjectFile } from "./features/project/path";
-import type { ProjectAnalysis, ProjectFile } from "./features/project/types";
+import { ConfigurationAnalyser } from "./features/configuration-analyser";
+import { toProjectFile } from "./features/project/file";
+import type { ProjectAnalysis } from "./features/project/types";
 import { analyzeProject } from "./features/source-analyser/model";
+
+const configurationAnalyser = new ConfigurationAnalyser();
 
 type FileInfo = {
   name: string;
@@ -28,38 +31,18 @@ type InvokeError = {
 
 type LoadingState = "idle" | "picking" | "scanning" | "reading" | "analyzing";
 
-type AnalysisRun = {
-  analysis: ProjectAnalysis;
-  readMs: number;
-  analyzeMs: number;
-};
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) {
-    return `${ms.toFixed(1)} ms`;
-  }
-  return `${(ms / 1000).toFixed(2)} s (${Math.round(ms)} ms)`;
-}
-
-function yieldToPaint(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-}
-
 function App() {
   const [projectRootAbsolute, setProjectRootAbsolute] = useState<string | null>(
     null,
   );
-  const [analysisRun, setAnalysisRun] = useState<AnalysisRun | null>(null);
+  const [analysis, setAnalysis] = useState<ProjectAnalysis | null>(null);
   const [error, setError] = useState<InvokeError | null>(null);
   const [loading, setLoading] = useState<LoadingState>("idle");
-
   const isBusy = loading !== "idle";
 
   async function openProject() {
     setError(null);
-    setAnalysisRun(null);
+    setAnalysis(null);
     setProjectRootAbsolute(null);
     setLoading("picking");
 
@@ -67,31 +50,30 @@ function App() {
       const picked = await invoke<ProjectRoot>("pick_project_folder");
       setProjectRootAbsolute(picked.rootPath);
 
+      const config = await configurationAnalyser.load(picked.rootPath, {
+        readText: (filePath) => invoke<string>("read_file", { path: filePath }),
+      });
+
       setLoading("scanning");
       const listed = await invoke<FileInfo[]>("list_project_files");
 
       setLoading("reading");
-      await yieldToPaint();
-      const readStarted = performance.now();
-      const projectFiles: ProjectFile[] = [];
-      for (const entry of listed) {
-        const content = await invoke<string>("read_file", { path: entry.path });
-        projectFiles.push(toProjectFile(entry.path, content, picked.rootPath));
-      }
-      const readMs = performance.now() - readStarted;
+      const paths = listed.map((entry) => entry.path);
+      const contents = await invoke<string[]>("read_file_concurrently", { paths });
+      const projectFiles = listed.map((entry, index) =>
+        toProjectFile(entry.path, contents[index], picked.rootPath),
+      );
 
       setLoading("analyzing");
-      await yieldToPaint();
-      const analyzeStarted = performance.now();
-      const analysis = analyzeProject(projectFiles, {
-        rootPathAbsolute: picked.rootPath,
-      });
-      const analyzeMs = performance.now() - analyzeStarted;
-
-      setAnalysisRun({ analysis, readMs, analyzeMs });
+      setAnalysis(
+        await analyzeProject(projectFiles, {
+          rootPathAbsolute: picked.rootPath,
+          config,
+        }),
+      );
     } catch (e) {
       setProjectRootAbsolute(null);
-      setAnalysisRun(null);
+      setAnalysis(null);
       setError(e as InvokeError);
     } finally {
       setLoading("idle");
@@ -126,16 +108,24 @@ function App() {
       {loading === "reading" && <p>Reading files…</p>}
       {loading === "analyzing" && <p>Analyzing project…</p>}
 
-      {analysisRun && (
+      {analysis && (
         <section className="analysis">
-          <p>Files: {analysisRun.analysis.stats.fileCount}</p>
-          <p>Modules: {analysisRun.analysis.stats.moduleCount}</p>
-          <p>Imports: {analysisRun.analysis.stats.totalImportSpecifiers}</p>
-          <p>Read: {formatDuration(analysisRun.readMs)}</p>
-          <p>Analyze: {formatDuration(analysisRun.analyzeMs)}</p>
-          <p>
-            Total: {formatDuration(analysisRun.readMs + analysisRun.analyzeMs)}
-          </p>
+          <p>Files: {analysis.stats.fileCount}</p>
+          <p>Modules: {analysis.stats.moduleCount}</p>
+          <p>Imports: {analysis.stats.totalDependencies}</p>
+
+        <ul>
+          {analysis.modules.map((module) => (
+            <li key={module.path}>
+              <h3>{module.path} - {module.dependencies.length}</h3>
+            <ul>
+              {module.dependencies.map((dependency) => (
+                <li key={dependency}>{dependency}</li>
+              ))}
+            </ul>
+            </li>
+          ))}
+        </ul>
         </section>
       )}
     </main>

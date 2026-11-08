@@ -1,3 +1,4 @@
+import type { ProjectConfig } from "../configuration-analyser/types";
 import type { AnalyzedModule } from "../source-analyser/types";
 
 /** Normalized project-relative path; unique module key. */
@@ -11,17 +12,14 @@ export interface ProjectFile {
 export interface ProjectAnalysisStats {
   fileCount: number;
   moduleCount: number;
-  totalImportSpecifiers: number;
+  totalDependencies: number;
 }
 
 export interface ProjectAnalysis {
   /** Empty string denotes the project root as module namespace. */
   rootPath: "";
   rootPathAbsolute?: string;
+  config: ProjectConfig;
   modules: AnalyzedModule[];
   stats: ProjectAnalysisStats;
-}
-
-export interface NormalizePathOptions {
-  projectRootAbsolute: string;
 }

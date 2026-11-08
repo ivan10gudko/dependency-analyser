@@ -6,14 +6,7 @@ use serde::Serialize;
 
 const SOURCE_EXTENSIONS: &[&str] = &[".ts", ".tsx", ".js", ".jsx"];
 
-const SKIP_DIR_NAMES: &[&str] = &[
-    "node_modules",
-    ".git",
-    ".next",
-    "dist",
-    "build",
-    "coverage",
-];
+const SKIP_DIR_NAMES: &[&str] = &["node_modules", ".git", ".next", "dist", "build", "coverage"];
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct FileInfo {
@@ -93,10 +86,7 @@ mod tests {
 
     #[test]
     fn collects_nested_source_files() {
-        let root = std::env::temp_dir().join(format!(
-            "dep_analyser_scan_{}",
-            std::process::id()
-        ));
+        let root = std::env::temp_dir().join(format!("dep_analyser_scan_{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         write_file(&root.join("src/a.ts"), "export {}");
         write_file(&root.join("src/lib/b.tsx"), "export {}");
@@ -116,10 +106,7 @@ mod tests {
 
     #[test]
     fn skips_common_directories() {
-        let root = std::env::temp_dir().join(format!(
-            "dep_analyser_skip_{}",
-            std::process::id()
-        ));
+        let root = std::env::temp_dir().join(format!("dep_analyser_skip_{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         write_file(&root.join("app.ts"), "export {}");
         write_file(&root.join("node_modules/pkg/index.ts"), "export {}");
@@ -135,10 +122,7 @@ mod tests {
 
     #[test]
     fn empty_directory_returns_empty_list() {
-        let root = std::env::temp_dir().join(format!(
-            "dep_analyser_empty_{}",
-            std::process::id()
-        ));
+        let root = std::env::temp_dir().join(format!("dep_analyser_empty_{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).unwrap();
 
@@ -149,14 +133,10 @@ mod tests {
 
     #[test]
     fn does_not_follow_symlinked_directories() {
-        let root = std::env::temp_dir().join(format!(
-            "dep_analyser_symlink_{}",
-            std::process::id()
-        ));
-        let outside = std::env::temp_dir().join(format!(
-            "dep_analyser_outside_{}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("dep_analyser_symlink_{}", std::process::id()));
+        let outside =
+            std::env::temp_dir().join(format!("dep_analyser_outside_{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         let _ = fs::remove_dir_all(&outside);
 

@@ -2,9 +2,10 @@ mod fs_scan;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
-use fs_scan::{collect_source_files, FileInfo};
+use fs_scan::{FileInfo, collect_source_files};
 use serde::Serialize;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
@@ -125,12 +126,9 @@ async fn pick_project_folder(
     let folder_path: PathBuf = selected.into_path()?;
     let canonical_root = fs::canonicalize(&folder_path)?;
 
-    *session
-        .0
-        .lock()
-        .map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::Other, "project session lock poisoned")
-        })? = Some(canonical_root.clone());
+    *session.0.lock().map_err(|_| {
+        std::io::Error::new(std::io::ErrorKind::Other, "project session lock poisoned")
+    })? = Some(canonical_root.clone());
 
     Ok(ProjectRoot {
         root_path: canonical_root.to_string_lossy().into_owned(),
@@ -149,6 +147,89 @@ fn read_file(session: State<'_, ProjectSession>, path: String) -> Result<String,
     Ok(fs::read_to_string(&file_path)?)
 }
 
+async fn map_concurrent<T, R, F>(items: Vec<T>, concurrency: usize, f: F) -> Result<Vec<R>, Error>
+where
+    T: Send + 'static,
+    R: Send + 'static,
+    F: Fn(T) -> Result<R, Error> + Send + Sync + 'static,
+{
+    let len = items.len();
+    if len == 0 {
+        return Ok(Vec::new());
+    }
+
+    let workers = concurrency.max(1).min(len);
+    let f = Arc::new(f);
+    let slots: Arc<Vec<Mutex<Option<T>>>> = Arc::new(
+        items
+            .into_iter()
+            .map(|item| Mutex::new(Some(item)))
+            .collect(),
+    );
+    let next = Arc::new(AtomicUsize::new(0));
+    let mut handles = Vec::with_capacity(workers);
+
+    for _ in 0..workers {
+        let slots = Arc::clone(&slots);
+        let next = Arc::clone(&next);
+        let f = Arc::clone(&f);
+        handles.push(tauri::async_runtime::spawn_blocking(move || {
+            let mut local = Vec::new();
+            loop {
+                let index = next.fetch_add(1, Ordering::Relaxed);
+                if index >= len {
+                    break;
+                }
+                let item = slots[index]
+                    .lock()
+                    .map_err(|_| {
+                        std::io::Error::new(std::io::ErrorKind::Other, "map lock poisoned")
+                    })?
+                    .take()
+                    .expect("item taken once");
+                local.push((index, f(item)?));
+            }
+            Ok(local)
+        }));
+    }
+
+    let mut indexed = Vec::with_capacity(len);
+    let mut first_error = None;
+    for handle in handles {
+        let finished = match handle.await {
+            Ok(finished) => finished,
+            Err(err) => Err(Error::Io(std::io::Error::other(err.to_string()))),
+        };
+        match finished {
+            Ok(part) => indexed.extend(part),
+            Err(err) if first_error.is_none() => first_error = Some(err),
+            Err(_) => {}
+        }
+    }
+    if let Some(err) = first_error {
+        return Err(err);
+    }
+
+    indexed.sort_by_key(|(index, _)| *index);
+    Ok(indexed.into_iter().map(|(_, value)| value).collect())
+}
+
+#[tauri::command]
+async fn read_file_concurrently(
+    session: State<'_, ProjectSession>,
+    paths: Vec<String>,
+) -> Result<Vec<String>, Error> {
+    let file_paths = paths
+        .iter()
+        .map(|path| resolve_project_file(&session, path))
+        .collect::<Result<Vec<_>, _>>()?;
+    let contents = map_concurrent(file_paths, 40, |path| {
+        fs::read_to_string(path).map_err(Error::from)
+    })
+    .await?;
+    Ok(contents)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -159,7 +240,23 @@ pub fn run() {
             pick_project_folder,
             list_project_files,
             read_file,
+            read_file_concurrently,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_concurrent_preserves_order() {
+        let values: Vec<u32> = (0..100).collect();
+        let results =
+            tauri::async_runtime::block_on(map_concurrent(values, 8, |n| Ok::<_, Error>(n * 2)))
+                .unwrap();
+
+        assert_eq!(results, (0..100).map(|n| n * 2).collect::<Vec<_>>());
+    }
 }

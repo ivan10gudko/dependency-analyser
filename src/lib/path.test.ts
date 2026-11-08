@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { moduleBaseName, normalizeModuleId, toProjectFile } from "./path.ts";
+import { fileNameOf, normalizeModuleId } from "./path.ts";
 
 const root = "/home/user/app";
 
@@ -22,9 +22,7 @@ describe("normalizeModuleId", () => {
   });
 
   it("accepts a path relative to the project root", () => {
-    expect(
-      normalizeModuleId("./src/a.ts", { projectRootAbsolute: root }),
-    ).toBe("src/a.ts");
+    expect(normalizeModuleId("./src/a.ts", { projectRootAbsolute: root })).toBe("src/a.ts");
   });
 
   it("collapses parent segments", () => {
@@ -44,16 +42,8 @@ describe("normalizeModuleId", () => {
   });
 });
 
-describe("toProjectFile", () => {
-  it("builds a ProjectFile with a relative path", () => {
-    expect(toProjectFile("/home/user/app/index.js", "console.log(1)", root)).toEqual(
-      { path: "index.js", content: "console.log(1)" },
-    );
-  });
-});
-
-describe("moduleBaseName", () => {
+describe("fileNameOf", () => {
   it("returns the file name segment", () => {
-    expect(moduleBaseName("src/features/auth/model.ts")).toBe("model.ts");
+    expect(fileNameOf("src/features/auth/model.ts")).toBe("model.ts");
   });
 });
