@@ -2,6 +2,11 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { ConfigurationAnalyser } from "./features/configuration-analyser";
+import {
+  buildModuleDependencyGraphFromAnalysis,
+  edgeCount,
+  type ModuleDependencyGraph,
+} from "./features/graph-data";
 import { toProjectFile } from "./features/project/file";
 import type { ProjectAnalysis } from "./features/project/types";
 import { analyzeProject } from "./features/source-analyser/model";
@@ -36,6 +41,7 @@ function App() {
     null,
   );
   const [analysis, setAnalysis] = useState<ProjectAnalysis | null>(null);
+  const [graph, setGraph] = useState<ModuleDependencyGraph | null>(null);
   const [error, setError] = useState<InvokeError | null>(null);
   const [loading, setLoading] = useState<LoadingState>("idle");
   const isBusy = loading !== "idle";
@@ -43,6 +49,7 @@ function App() {
   async function openProject() {
     setError(null);
     setAnalysis(null);
+    setGraph(null);
     setProjectRootAbsolute(null);
     setLoading("picking");
 
@@ -65,15 +72,16 @@ function App() {
       );
 
       setLoading("analyzing");
-      setAnalysis(
-        await analyzeProject(projectFiles, {
-          rootPathAbsolute: picked.rootPath,
-          config,
-        }),
-      );
+      const projectAnalysis = await analyzeProject(projectFiles, {
+        rootPathAbsolute: picked.rootPath,
+        config,
+      });
+      setAnalysis(projectAnalysis);
+      setGraph(buildModuleDependencyGraphFromAnalysis(projectAnalysis));
     } catch (e) {
       setProjectRootAbsolute(null);
       setAnalysis(null);
+      setGraph(null);
       setError(e as InvokeError);
     } finally {
       setLoading("idle");
@@ -113,6 +121,11 @@ function App() {
           <p>Files: {analysis.stats.fileCount}</p>
           <p>Modules: {analysis.stats.moduleCount}</p>
           <p>Imports: {analysis.stats.totalDependencies}</p>
+          {graph && (
+            <p>
+              Graph: {graph.nodes.size} nodes, {edgeCount(graph)} edges
+            </p>
+          )}
 
         <ul>
           {analysis.modules.map((module) => (
