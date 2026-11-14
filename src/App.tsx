@@ -2,11 +2,11 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { ConfigurationAnalyser } from "./features/configuration-analyser";
+import { buildModuleDependencyGraphFromAnalysis } from "./features/graph-data";
 import {
-  buildModuleDependencyGraphFromAnalysis,
-  edgeCount,
-  type ModuleDependencyGraph,
-} from "./features/graph-data";
+  buildHierarchicalLayout,
+  type LayoutRenderModel,
+} from "./features/hierarchical-graph-layout";
 import { toProjectFile } from "./features/project/file";
 import type { ProjectAnalysis } from "./features/project/types";
 import { analyzeProject } from "./features/source-analyser/model";
@@ -41,7 +41,7 @@ function App() {
     null,
   );
   const [analysis, setAnalysis] = useState<ProjectAnalysis | null>(null);
-  const [graph, setGraph] = useState<ModuleDependencyGraph | null>(null);
+  const [layoutModel, setLayoutModel] = useState<LayoutRenderModel | null>(null);
   const [error, setError] = useState<InvokeError | null>(null);
   const [loading, setLoading] = useState<LoadingState>("idle");
   const isBusy = loading !== "idle";
@@ -49,7 +49,7 @@ function App() {
   async function openProject() {
     setError(null);
     setAnalysis(null);
-    setGraph(null);
+    setLayoutModel(null);
     setProjectRootAbsolute(null);
     setLoading("picking");
 
@@ -77,11 +77,12 @@ function App() {
         config,
       });
       setAnalysis(projectAnalysis);
-      setGraph(buildModuleDependencyGraphFromAnalysis(projectAnalysis));
+      const dependencyGraph = buildModuleDependencyGraphFromAnalysis(projectAnalysis);
+      setLayoutModel(buildHierarchicalLayout(dependencyGraph).model);
     } catch (e) {
       setProjectRootAbsolute(null);
       setAnalysis(null);
-      setGraph(null);
+      setLayoutModel(null);
       setError(e as InvokeError);
     } finally {
       setLoading("idle");
@@ -121,24 +122,20 @@ function App() {
           <p>Files: {analysis.stats.fileCount}</p>
           <p>Modules: {analysis.stats.moduleCount}</p>
           <p>Imports: {analysis.stats.totalDependencies}</p>
-          {graph && (
-            <p>
-              Graph: {graph.nodes.size} nodes, {edgeCount(graph)} edges
-            </p>
+          {layoutModel && (
+            <>
+              <p>
+                Layout: {layoutModel.nodes.length} nodes, {layoutModel.edges.length}{" "}
+                edges
+              </p>
+              <details open className="layout-details">
+                <summary>Layout JSON (for renderer)</summary>
+                <pre className="layout-json">
+                  {JSON.stringify(layoutModel, null, 2)}
+                </pre>
+              </details>
+            </>
           )}
-
-        <ul>
-          {analysis.modules.map((module) => (
-            <li key={module.path}>
-              <h3>{module.path} - {module.dependencies.length}</h3>
-            <ul>
-              {module.dependencies.map((dependency) => (
-                <li key={dependency}>{dependency}</li>
-              ))}
-            </ul>
-            </li>
-          ))}
-        </ul>
         </section>
       )}
     </main>
