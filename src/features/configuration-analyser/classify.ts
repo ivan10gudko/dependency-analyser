@@ -7,29 +7,33 @@ export enum ImportSpecifierResolution {
   Package = "package",
 }
 
-function matchPattern(
-  pattern: string,
+export function classifyImportSpecifier(
   specifier: string,
-): { score: number; captured?: string } | undefined {
-  const star = pattern.indexOf("*");
-  if (star === -1) {
-    return specifier === pattern ? { score: pattern.length } : undefined;
+  config: ProjectConfig,
+): ImportSpecifierResolution {
+  if (specifier.startsWith("./") || specifier.startsWith("../")) {
+    return ImportSpecifierResolution.Relative;
   }
-
-  const prefix = pattern.slice(0, star);
-  const suffix = pattern.slice(star + 1);
-  if (
-    !specifier.startsWith(prefix) ||
-    !specifier.endsWith(suffix) ||
-    specifier.length < prefix.length + suffix.length
-  ) {
-    return undefined;
+  if (specifier.startsWith("#")) {
+    return ImportSpecifierResolution.Package;
   }
+  if (matchingAlias(specifier, config.aliases)) {
+    return ImportSpecifierResolution.Alias;
+  }
+  return ImportSpecifierResolution.External;
+}
 
-  return {
-    score: prefix.length,
-    captured: specifier.slice(prefix.length, specifier.length - suffix.length),
-  };
+export function mappedTargets(
+  specifier: string,
+  mappings: readonly AliasMapping[],
+): string[] {
+  const mapping = matchingAlias(specifier, mappings);
+  if (!mapping) return [];
+
+  return mapping.targets.flatMap((target) => {
+    const expanded = expandPattern(mapping.pattern, target, specifier);
+    return expanded === undefined ? [] : [expanded];
+  });
 }
 
 function matchingAlias(specifier: string, aliases: readonly AliasMapping[]): AliasMapping | undefined {
@@ -60,31 +64,27 @@ export function expandPattern(
   return target.slice(0, star) + match.captured + target.slice(star + 1);
 }
 
-export function mappedTargets(
+function matchPattern(
+  pattern: string,
   specifier: string,
-  mappings: readonly AliasMapping[],
-): string[] {
-  const mapping = matchingAlias(specifier, mappings);
-  if (!mapping) return [];
+): { score: number; captured?: string } | undefined {
+  const star = pattern.indexOf("*");
+  if (star === -1) {
+    return specifier === pattern ? { score: pattern.length } : undefined;
+  }
 
-  return mapping.targets.flatMap((target) => {
-    const expanded = expandPattern(mapping.pattern, target, specifier);
-    return expanded === undefined ? [] : [expanded];
-  });
-}
+  const prefix = pattern.slice(0, star);
+  const suffix = pattern.slice(star + 1);
+  if (
+    !specifier.startsWith(prefix) ||
+    !specifier.endsWith(suffix) ||
+    specifier.length < prefix.length + suffix.length
+  ) {
+    return undefined;
+  }
 
-export function classifyImportSpecifier(
-  specifier: string,
-  config: ProjectConfig,
-): ImportSpecifierResolution {
-  if (specifier.startsWith("./") || specifier.startsWith("../")) {
-    return ImportSpecifierResolution.Relative;
-  }
-  if (specifier.startsWith("#")) {
-    return ImportSpecifierResolution.Package;
-  }
-  if (matchingAlias(specifier, config.aliases)) {
-    return ImportSpecifierResolution.Alias;
-  }
-  return ImportSpecifierResolution.External;
+  return {
+    score: prefix.length,
+    captured: specifier.slice(prefix.length, specifier.length - suffix.length),
+  };
 }

@@ -8,8 +8,8 @@ import {
   edgeTargetAnchor,
   logicalEdgePath,
   pointsToSvgPath,
-} from "./edge-path";
-import type { EdgeRoutingProfile } from "./edge-routing";
+} from "../utils/edge-path";
+import type { EdgeRoutingProfile } from "../utils/edge-routing";
 
 describe("edge anchors", () => {
   it("uses bottom-center and top-center for module boxes", () => {

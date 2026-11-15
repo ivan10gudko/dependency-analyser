@@ -71,34 +71,33 @@ const PREFERRED_ROOTS = [
   "router.tsx",
 ] as const;
 
-function isPoorRootCandidate(moduleId: NodeId): boolean {
-  if (/\.d\.ts$/i.test(moduleId)) return true;
-  if (/(^|\/)(next|vite)-env\.d\.ts$/i.test(moduleId)) return true;
-  if (/(^|\/)eslint\.config\./i.test(moduleId)) return true;
-  if (/(^|\/)(vite|vitest|webpack|rollup)\.config\./i.test(moduleId)) return true;
-  return false;
-}
-
-function reachableSize(graph: ModuleDependencyGraph, root: NodeId): number {
-  return collectReachableFromRoot(graph, root).size;
-}
-
-function pickLargestReachableRoot(
+export function buildHierarchicalLayout(
   graph: ModuleDependencyGraph,
-  candidates: readonly NodeId[],
-): NodeId | undefined {
-  let best: NodeId | undefined;
-  let bestSize = 0;
+  options?: BuildHierarchicalLayoutOptions,
+): HierarchicalLayoutResult {
+  const root = options?.root ?? pickLayoutRoot(graph);
+  const acyclic = breakCycles(graph, root);
+  const layers = assignLayers(acyclic);
+  const layoutGraph = createDummyNodes(acyclic, layers);
+  const layerOrder = buildInitialLayerOrder(layoutGraph);
 
-  for (const candidate of candidates) {
-    const size = reachableSize(graph, candidate);
-    if (size > bestSize) {
-      bestSize = size;
-      best = candidate;
-    }
-  }
+  reduceCrossings(layoutGraph, layerOrder, {
+    passes: options?.crossingPasses ?? 6,
+  });
+  assignDagX(layoutGraph, layerOrder, {
+    iterations: options?.xIterations ?? 2,
+  });
+  assignYCoordinates(layoutGraph, options);
 
-  return best;
+  return {
+    layoutGraph,
+    layerOrder,
+    model: toLayoutRenderModel(layoutGraph, layerOrder),
+    scope: {
+      root,
+      totalModules: acyclic.nodes.size,
+    },
+  };
 }
 
 export function pickLayoutRoot(graph: ModuleDependencyGraph): NodeId {
@@ -120,6 +119,36 @@ export function pickLayoutRoot(graph: ModuleDependencyGraph): NodeId {
   if (fromRemaining !== undefined) return fromRemaining;
 
   return [...nodes].sort((left, right) => left.localeCompare(right))[0]!;
+}
+
+function isPoorRootCandidate(moduleId: NodeId): boolean {
+  if (/\.d\.ts$/i.test(moduleId)) return true;
+  if (/(^|\/)(next|vite)-env\.d\.ts$/i.test(moduleId)) return true;
+  if (/(^|\/)eslint\.config\./i.test(moduleId)) return true;
+  if (/(^|\/)(vite|vitest|webpack|rollup)\.config\./i.test(moduleId)) return true;
+  return false;
+}
+
+function pickLargestReachableRoot(
+  graph: ModuleDependencyGraph,
+  candidates: readonly NodeId[],
+): NodeId | undefined {
+  let best: NodeId | undefined;
+  let bestSize = 0;
+
+  for (const candidate of candidates) {
+    const size = reachableSize(graph, candidate);
+    if (size > bestSize) {
+      bestSize = size;
+      best = candidate;
+    }
+  }
+
+  return best;
+}
+
+function reachableSize(graph: ModuleDependencyGraph, root: NodeId): number {
+  return collectReachableFromRoot(graph, root).size;
 }
 
 export function toLayoutRenderModel(
@@ -165,33 +194,4 @@ export function toLayoutRenderModel(
   }
 
   return { nodes, edges, layerOrder: layerOrderRecord };
-}
-
-export function buildHierarchicalLayout(
-  graph: ModuleDependencyGraph,
-  options?: BuildHierarchicalLayoutOptions,
-): HierarchicalLayoutResult {
-  const root = options?.root ?? pickLayoutRoot(graph);
-  const acyclic = breakCycles(graph, root);
-  const layers = assignLayers(acyclic);
-  const layoutGraph = createDummyNodes(acyclic, layers);
-  const layerOrder = buildInitialLayerOrder(layoutGraph);
-
-  reduceCrossings(layoutGraph, layerOrder, {
-    passes: options?.crossingPasses ?? 6,
-  });
-  assignDagX(layoutGraph, layerOrder, {
-    iterations: options?.xIterations ?? 2,
-  });
-  assignYCoordinates(layoutGraph, options);
-
-  return {
-    layoutGraph,
-    layerOrder,
-    model: toLayoutRenderModel(layoutGraph, layerOrder),
-    scope: {
-      root,
-      totalModules: acyclic.nodes.size,
-    },
-  };
 }

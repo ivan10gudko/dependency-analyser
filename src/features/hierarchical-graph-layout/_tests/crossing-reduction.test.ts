@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { LayoutGraph, LayoutNode } from "./types";
+import type { LayoutGraph, LayoutNode } from "../types";
 
-import { downSweep, reduceCrossings, upSweep } from "./crossing-reduction";
-import { buildInitialLayerOrder } from "./layer-order";
+import { downSweep, reduceCrossings, upSweep } from "../crossing-reduction";
+import { buildInitialLayerOrder } from "../layer-order";
 
 function layoutWith(nodes: LayoutNode[], edges: [string, string][]): LayoutGraph {
   const map = new Map(nodes.map((node) => [node.id, node]));

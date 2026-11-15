@@ -8,7 +8,7 @@ import {
   neighborSet,
   neighborsFromAdjacencyList,
   predecessorsFromAdjacencyList,
-} from "./graph";
+} from "../graph";
 
 const adjacency = new Map<string, string[]>([
   ["A", ["B", "C"]],

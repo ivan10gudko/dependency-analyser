@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeLayoutBounds } from "./layout-bounds";
+import { computeLayoutBounds } from "../utils/layout-bounds";
 
 describe("computeLayoutBounds", () => {
   it("returns stable bounds for an empty graph", () => {

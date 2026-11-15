@@ -9,8 +9,8 @@ import {
   TsConfigParser,
   ViteConfigParser,
   WebpackConfigParser,
-} from "./index.ts";
-import type { ConfigParser, ParseContext, ParsedConfig } from "./types.ts";
+} from "../index.ts";
+import type { ConfigParser, ParseContext, ParsedConfig } from "../types.ts";
 
 function reader(files: Record<string, string>): ParseContext {
   const contents = new Map(

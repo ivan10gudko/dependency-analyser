@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LayoutRenderNode } from "../../hierarchical-graph-layout";
 
-import { buildLogicalEdges } from "./logical-edges";
+import { buildLogicalEdges } from "../utils/logical-edges";
 
 function node(
   id: string,

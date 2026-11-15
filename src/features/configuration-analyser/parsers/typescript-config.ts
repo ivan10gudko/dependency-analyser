@@ -13,43 +13,20 @@ import { isRecord } from "../../../lib/utils";
 import { emptyParsedConfig, overlayParsed } from "../merge";
 import type { AliasMapping, ParseContext, ParsedConfig } from "../types";
 
-function aliasesFromPaths(paths: unknown): AliasMapping[] {
-  if (!isRecord(paths)) return [];
-
-  const aliases: AliasMapping[] = [];
-  for (const [pattern, value] of Object.entries(paths)) {
-    if (!Array.isArray(value)) continue;
-    const targets = value.filter((item): item is string => typeof item === "string");
-    if (targets.length === 0) continue;
-    aliases.push({ pattern, targets });
-  }
-  return aliases;
-}
-
-function extractOwnConfig(
-  config: Record<string, unknown>,
+export async function parseTypeScriptConfig(
   filePath: string,
-  projectDirectory: string,
-): ParsedConfig {
-  const compilerOptions = isRecord(config.compilerOptions) ? config.compilerOptions : {};
-  const parsed = emptyParsedConfig();
-  if (typeof compilerOptions.baseUrl === "string") {
-    parsed.baseUrl = toProjectRelative(filePath, compilerOptions.baseUrl, projectDirectory);
-  }
-  parsed.aliases = aliasesFromPaths(compilerOptions.paths);
-  return parsed;
-}
-
-function relativeExtendSpecs(value: unknown): string[] {
-  const entries = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
-  return entries.filter(
-    (entry): entry is string =>
-      typeof entry === "string" && (entry.startsWith("./") || entry.startsWith("../")),
+  context: ParseContext,
+): Promise<ParsedConfig> {
+  const parsed = await readTypeScriptConfig(
+    filePath,
+    context,
+    new Set(),
+    directoryOf(filePath),
   );
-}
-
-function ensureJsonExtension(specifier: string): string {
-  return specifier.endsWith(".json") ? specifier : `${specifier}.json`;
+  if (!parsed) {
+    throw new Error(`cannot parse ${filePath}`);
+  }
+  return parsed;
 }
 
 async function readTypeScriptConfig(
@@ -98,18 +75,41 @@ async function readExtends(
   return merged;
 }
 
-export async function parseTypeScriptConfig(
+function extractOwnConfig(
+  config: Record<string, unknown>,
   filePath: string,
-  context: ParseContext,
-): Promise<ParsedConfig> {
-  const parsed = await readTypeScriptConfig(
-    filePath,
-    context,
-    new Set(),
-    directoryOf(filePath),
-  );
-  if (!parsed) {
-    throw new Error(`cannot parse ${filePath}`);
+  projectDirectory: string,
+): ParsedConfig {
+  const compilerOptions = isRecord(config.compilerOptions) ? config.compilerOptions : {};
+  const parsed = emptyParsedConfig();
+  if (typeof compilerOptions.baseUrl === "string") {
+    parsed.baseUrl = toProjectRelative(filePath, compilerOptions.baseUrl, projectDirectory);
   }
+  parsed.aliases = aliasesFromPaths(compilerOptions.paths);
   return parsed;
+}
+
+function aliasesFromPaths(paths: unknown): AliasMapping[] {
+  if (!isRecord(paths)) return [];
+
+  const aliases: AliasMapping[] = [];
+  for (const [pattern, value] of Object.entries(paths)) {
+    if (!Array.isArray(value)) continue;
+    const targets = value.filter((item): item is string => typeof item === "string");
+    if (targets.length === 0) continue;
+    aliases.push({ pattern, targets });
+  }
+  return aliases;
+}
+
+function relativeExtendSpecs(value: unknown): string[] {
+  const entries = typeof value === "string" ? [value] : Array.isArray(value) ? value : [];
+  return entries.filter(
+    (entry): entry is string =>
+      typeof entry === "string" && (entry.startsWith("./") || entry.startsWith("../")),
+  );
+}
+
+function ensureJsonExtension(specifier: string): string {
+  return specifier.endsWith(".json") ? specifier : `${specifier}.json`;
 }

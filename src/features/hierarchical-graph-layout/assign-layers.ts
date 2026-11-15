@@ -5,17 +5,6 @@ export type LayerIndex = number;
 
 export type NodeLayers = Map<NodeId, LayerIndex>;
 
-function allPredecessorsLayered(
-  node: NodeId,
-  predecessors: ReadonlyMap<NodeId, ReadonlySet<NodeId>>,
-  layers: NodeLayers,
-): boolean {
-  for (const pred of predecessors.get(node) ?? []) {
-    if (!layers.has(pred)) return false;
-  }
-  return true;
-}
-
 //Assigns nodes to layers so every edge goes from a lower layer to a higher layer
 export function assignLayers(graph: ModuleDependencyGraph): NodeLayers {
   const { adjacencyList } = graph;
@@ -54,6 +43,17 @@ export function assignLayers(graph: ModuleDependencyGraph): NodeLayers {
   }
 
   return layers;
+}
+
+function allPredecessorsLayered(
+  node: NodeId,
+  predecessors: ReadonlyMap<NodeId, ReadonlySet<NodeId>>,
+  layers: NodeLayers,
+): boolean {
+  for (const pred of predecessors.get(node) ?? []) {
+    if (!layers.has(pred)) return false;
+  }
+  return true;
 }
 
 /**

@@ -8,6 +8,16 @@ export function emptyParsedConfig(): ParsedConfig {
   };
 }
 
+// Later config overrides alias targets, package-import targets, and baseUrl.
+export function overlayParsed(base: ParsedConfig, overlay: ParsedConfig): ParsedConfig {
+  return {
+    aliases: upsertByPattern(base.aliases, overlay.aliases),
+    packageImports: upsertByPattern(base.packageImports, overlay.packageImports),
+    externalPackages: unionNames(base.externalPackages, overlay.externalPackages),
+    baseUrl: overlay.baseUrl ?? base.baseUrl,
+  };
+}
+
 export function upsertByPattern<T extends { pattern: string }>(
   current: readonly T[],
   incoming: readonly T[],
@@ -31,14 +41,4 @@ export function unionNames(
     names.push(name);
   }
   return names;
-}
-
-// Later config overrides alias targets, package-import targets, and baseUrl.
-export function overlayParsed(base: ParsedConfig, overlay: ParsedConfig): ParsedConfig {
-  return {
-    aliases: upsertByPattern(base.aliases, overlay.aliases),
-    packageImports: upsertByPattern(base.packageImports, overlay.packageImports),
-    externalPackages: unionNames(base.externalPackages, overlay.externalPackages),
-    baseUrl: overlay.baseUrl ?? base.baseUrl,
-  };
 }

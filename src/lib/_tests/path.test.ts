@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fileNameOf, normalizeModuleId } from "./path.ts";
+import { fileNameOf, normalizeModuleId } from "../path.ts";
 
 const root = "/home/user/app";
 

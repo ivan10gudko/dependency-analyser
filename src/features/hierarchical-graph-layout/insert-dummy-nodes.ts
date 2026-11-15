@@ -16,33 +16,6 @@ export interface CreateDummyNodesOptions {
   defaultModuleSize?: NodeDimensions;
 }
 
-function layoutNodeFromModule(
-  module: GraphNode,
-  layer: number,
-  size: NodeDimensions,
-): LayoutNode {
-  return {
-    id: module.id,
-    isDummy: false,
-    module,
-    layer,
-    width: moduleNodeWidthForLabel(module.name, size.width),
-    height: size.height,
-  };
-}
-
-function collectOriginalEdges(
-  graph: ModuleDependencyGraph,
-): Array<[NodeId, NodeId]> {
-  const edges: Array<[NodeId, NodeId]> = [];
-  for (const [source, targets] of graph.adjacencyList) {
-    for (const target of targets) {
-      edges.push([source, target]);
-    }
-  }
-  return edges;
-}
-
 // Inserts dummy vertices so every edge spans exactly one layer
 export function createDummyNodes(
   graph: ModuleDependencyGraph,
@@ -99,4 +72,31 @@ export function createDummyNodes(
   }
 
   return { nodes: layoutNodes, adjacencyList };
+}
+
+function layoutNodeFromModule(
+  module: GraphNode,
+  layer: number,
+  size: NodeDimensions,
+): LayoutNode {
+  return {
+    id: module.id,
+    isDummy: false,
+    module,
+    layer,
+    width: moduleNodeWidthForLabel(module.name, size.width),
+    height: size.height,
+  };
+}
+
+function collectOriginalEdges(
+  graph: ModuleDependencyGraph,
+): Array<[NodeId, NodeId]> {
+  const edges: Array<[NodeId, NodeId]> = [];
+  for (const [source, targets] of graph.adjacencyList) {
+    for (const target of targets) {
+      edges.push([source, target]);
+    }
+  }
+  return edges;
 }

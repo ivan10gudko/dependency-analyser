@@ -23,35 +23,6 @@ const defaultParsers: readonly ConfigParser[] = [
   new WebpackConfigParser(),
 ];
 
-function sourceOf(parser: ConfigParser): ConfigSource {
-  if (parser instanceof TsConfigParser) return "tsconfig";
-  if (parser instanceof JsConfigParser) return "jsconfig";
-  if (parser instanceof PackageJsonParser) return "package";
-  return "bundler";
-}
-
-function mergeCollected(rootPath: string, parts: readonly CollectedConfig[]): ProjectConfig {
-  const hasTsConfig = parts.some((part) => part.source === "tsconfig");
-  const config: ProjectConfig = {
-    rootPath,
-    aliases: [],
-    packageImports: [],
-    externalPackages: [],
-  };
-
-  for (const part of parts) {
-    // typeScript project takes paths from tsconfig. jsconfig is only for projects without one.
-    if (part.source === "jsconfig" && hasTsConfig) continue;
-
-    if (part.config.baseUrl !== undefined) config.baseUrl = part.config.baseUrl;
-    config.packageImports = upsertByPattern(config.packageImports, part.config.packageImports);
-    config.externalPackages = unionNames(config.externalPackages, part.config.externalPackages);
-    config.aliases = upsertByPattern(config.aliases, part.config.aliases);
-  }
-
-  return config;
-}
-
 export class ConfigurationAnalyser {
   constructor(private readonly parsers: readonly ConfigParser[] = defaultParsers) {}
 
@@ -79,4 +50,33 @@ export class ConfigurationAnalyser {
 
     return mergeCollected(rootPath, collected);
   }
+}
+
+function sourceOf(parser: ConfigParser): ConfigSource {
+  if (parser instanceof TsConfigParser) return "tsconfig";
+  if (parser instanceof JsConfigParser) return "jsconfig";
+  if (parser instanceof PackageJsonParser) return "package";
+  return "bundler";
+}
+
+function mergeCollected(rootPath: string, parts: readonly CollectedConfig[]): ProjectConfig {
+  const hasTsConfig = parts.some((part) => part.source === "tsconfig");
+  const config: ProjectConfig = {
+    rootPath,
+    aliases: [],
+    packageImports: [],
+    externalPackages: [],
+  };
+
+  for (const part of parts) {
+    // typeScript project takes paths from tsconfig. jsconfig is only for projects without one.
+    if (part.source === "jsconfig" && hasTsConfig) continue;
+
+    if (part.config.baseUrl !== undefined) config.baseUrl = part.config.baseUrl;
+    config.packageImports = upsertByPattern(config.packageImports, part.config.packageImports);
+    config.externalPackages = unionNames(config.externalPackages, part.config.externalPackages);
+    config.aliases = upsertByPattern(config.aliases, part.config.aliases);
+  }
+
+  return config;
 }

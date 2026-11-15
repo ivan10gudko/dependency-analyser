@@ -4,10 +4,6 @@ export interface GraphNodeProps {
   node: LayoutRenderNode;
 }
 
-function displayLabel(node: LayoutRenderNode): string {
-  return node.label ?? node.id;
-}
-
 export function GraphNode({ node }: GraphNodeProps) {
   if (node.isDummy) return null;
 
@@ -33,4 +29,8 @@ export function GraphNode({ node }: GraphNodeProps) {
       </text>
     </g>
   );
+}
+
+function displayLabel(node: LayoutRenderNode): string {
+  return node.label ?? node.id;
 }

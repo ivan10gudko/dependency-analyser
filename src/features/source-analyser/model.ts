@@ -12,52 +12,46 @@ import type {
 
 const SOURCE_EXTENSION_SET = new Set<string>(SOURCE_EXTENSIONS);
 
-function convertToSourceFile(file: ProjectFile): ts.SourceFile {
-  return ts.createSourceFile(
-    fileNameOf(file.path),
-    file.content,
-    ts.ScriptTarget.Latest,
-    true,
+export async function analyzeProject(
+  files: ProjectFile[],
+  options?: { rootPathAbsolute?: string; config?: ProjectConfig },
+): Promise<ProjectAnalysis> {
+  const config = options?.config ?? emptyProjectConfig(options?.rootPathAbsolute ?? "");
+  const moduleIds = new Set(
+    files
+      .filter((file) => SOURCE_EXTENSION_SET.has(extensionOfModulePath(file.path)))
+      .map((file) => file.path),
   );
-}
+  const modules: AnalyzedModule[] = [];
+  let totalDependencies = 0;
 
-function moduleSpecifierOf(node: ts.Node): string | undefined {
-  if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
-    const specifier = node.moduleSpecifier;
-    if (specifier && ts.isStringLiteral(specifier)) return specifier.text;
-    return undefined;
+  for (const file of files) {
+    const result = await analyzeModule(file, { config, moduleIds });
+    if (!result.ok) continue;
+    modules.push(result.module);
+    totalDependencies += result.module.dependencies.length;
   }
 
-  if (
-    ts.isCallExpression(node) &&
-    node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-    node.arguments[0] &&
-    ts.isStringLiteral(node.arguments[0])
-  ) {
-    return node.arguments[0].text;
-  }
-
-  return undefined;
+  return {
+    rootPath: "",
+    rootPathAbsolute: options?.rootPathAbsolute,
+    config,
+    modules,
+    stats: {
+      fileCount: files.length,
+      moduleCount: modules.length,
+      totalDependencies,
+    },
+  };
 }
 
-function findImportSpecifiers(sourceFile: ts.SourceFile): string[] {
-  const importSpecifiers: string[] = [];
-
-  function visit(node: ts.Node): void {
-    const specifier = moduleSpecifierOf(node);
-    if (specifier) importSpecifiers.push(specifier);
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-  return importSpecifiers;
-}
-
-function extensionOfModulePath(path: string): string {
-  const name = fileNameOf(path);
-  const dot = name.lastIndexOf(".");
-  if (dot <= 0) return "";
-  return name.slice(dot).toLowerCase();
+function emptyProjectConfig(rootPath: string): ProjectConfig {
+  return {
+    rootPath,
+    aliases: [],
+    packageImports: [],
+    externalPackages: [],
+  };
 }
 
 /**
@@ -92,45 +86,50 @@ export async function analyzeModule(
   return { ok: true, module };
 }
 
-
-function emptyProjectConfig(rootPath: string): ProjectConfig {
-  return {
-    rootPath,
-    aliases: [],
-    packageImports: [],
-    externalPackages: [],
-  };
+function extensionOfModulePath(path: string): string {
+  const name = fileNameOf(path);
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0) return "";
+  return name.slice(dot).toLowerCase();
 }
 
-export async function analyzeProject(
-  files: ProjectFile[],
-  options?: { rootPathAbsolute?: string; config?: ProjectConfig },
-): Promise<ProjectAnalysis> {
-  const config = options?.config ?? emptyProjectConfig(options?.rootPathAbsolute ?? "");
-  const moduleIds = new Set(
-    files
-      .filter((file) => SOURCE_EXTENSION_SET.has(extensionOfModulePath(file.path)))
-      .map((file) => file.path),
+function convertToSourceFile(file: ProjectFile): ts.SourceFile {
+  return ts.createSourceFile(
+    fileNameOf(file.path),
+    file.content,
+    ts.ScriptTarget.Latest,
+    true,
   );
-  const modules: AnalyzedModule[] = [];
-  let totalDependencies = 0;
+}
 
-  for (const file of files) {
-    const result = await analyzeModule(file, { config, moduleIds });
-    if (!result.ok) continue;
-    modules.push(result.module);
-    totalDependencies += result.module.dependencies.length;
+function findImportSpecifiers(sourceFile: ts.SourceFile): string[] {
+  const importSpecifiers: string[] = [];
+
+  function visit(node: ts.Node): void {
+    const specifier = moduleSpecifierOf(node);
+    if (specifier) importSpecifiers.push(specifier);
+    ts.forEachChild(node, visit);
   }
 
-  return {
-    rootPath: "",
-    rootPathAbsolute: options?.rootPathAbsolute,
-    config,
-    modules,
-    stats: {
-      fileCount: files.length,
-      moduleCount: modules.length,
-      totalDependencies,
-    },
-  };
+  visit(sourceFile);
+  return importSpecifiers;
+}
+
+function moduleSpecifierOf(node: ts.Node): string | undefined {
+  if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+    const specifier = node.moduleSpecifier;
+    if (specifier && ts.isStringLiteral(specifier)) return specifier.text;
+    return undefined;
+  }
+
+  if (
+    ts.isCallExpression(node) &&
+    node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+    node.arguments[0] &&
+    ts.isStringLiteral(node.arguments[0])
+  ) {
+    return node.arguments[0].text;
+  }
+
+  return undefined;
 }

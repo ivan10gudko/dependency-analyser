@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatViewBox, parseViewBox, zoomViewBoxAt } from "./view-box";
+import { formatViewBox, parseViewBox, zoomViewBoxAt } from "../utils/view-box";
 
 describe("view-box", () => {
   it("round-trips parse/format", () => {

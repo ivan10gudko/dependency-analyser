@@ -4,12 +4,10 @@ import type { AnalyzedModule } from "../source-analyser/types";
 
 import type { GraphNode, ModuleDependencyGraph, NodeId } from "./types";
 
-function graphNodeOf(id: NodeId): GraphNode {
-  return {
-    id,
-    name: fileNameOf(id),
-    directory: directoryOf(id),
-  };
+export function buildModuleDependencyGraphFromAnalysis(
+  analysis: ProjectAnalysis,
+): ModuleDependencyGraph {
+  return buildModuleDependencyGraph(analysis.modules);
 }
 
 export function buildModuleDependencyGraph(
@@ -26,10 +24,12 @@ export function buildModuleDependencyGraph(
   return { nodes, adjacencyList };
 }
 
-export function buildModuleDependencyGraphFromAnalysis(
-  analysis: ProjectAnalysis,
-): ModuleDependencyGraph {
-  return buildModuleDependencyGraph(analysis.modules);
+function graphNodeOf(id: NodeId): GraphNode {
+  return {
+    id,
+    name: fileNameOf(id),
+    directory: directoryOf(id),
+  };
 }
 
 export function edgeCount(graph: ModuleDependencyGraph): number {

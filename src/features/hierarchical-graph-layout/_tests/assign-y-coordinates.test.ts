@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { LayoutGraph, LayoutNode } from "./types";
+import type { LayoutGraph, LayoutNode } from "../types";
 
-import { assignYCoordinates } from "./assign-y-coordinates";
+import { assignYCoordinates } from "../assign-y-coordinates";
 
 function layoutWith(nodes: LayoutNode[]): LayoutGraph {
   const map = new Map(nodes.map((node) => [node.id, node]));

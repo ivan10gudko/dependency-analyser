@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProjectConfig } from "../configuration-analyser/types";
-import type { ProjectFile } from "../project/types";
-import { analyzeProject } from "./model";
-import { resolveImportToModule } from "./resolve";
+import type { ProjectConfig } from "../../configuration-analyser/types";
+import type { ProjectFile } from "../../project/types";
+import { analyzeProject } from "../model";
+import { resolveImportToModule } from "../resolve";
 
 const files = [
   "src/app/[locale]/(marketing)/account/page.tsx",

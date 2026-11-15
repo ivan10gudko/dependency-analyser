@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { AnalyzedModule } from "../source-analyser/types";
+import type { AnalyzedModule } from "../../source-analyser/types";
 
-import { buildModuleDependencyGraph, edgeCount } from "./build";
+import { buildModuleDependencyGraph, edgeCount } from "../build";
 
 describe("buildModuleDependencyGraph", () => {
   it("maps importer to dependencies in the adjacency list", () => {

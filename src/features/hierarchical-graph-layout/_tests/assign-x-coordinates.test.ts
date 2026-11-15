@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { LayoutGraph, LayoutNode } from "./types";
+import type { LayoutGraph, LayoutNode } from "../types";
 
 import {
   addNode,
@@ -8,8 +8,8 @@ import {
   compactLayers,
   dagDownSweep,
   dagUpSweep,
-} from "./assign-x-coordinates";
-import { buildInitialLayerOrder } from "./layer-order";
+} from "../assign-x-coordinates";
+import { buildInitialLayerOrder } from "../layer-order";
 
 function layoutWith(nodes: LayoutNode[], edges: [string, string][]): LayoutGraph {
   const map = new Map(nodes.map((node) => [node.id, { ...node }]));

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { ModuleDependencyGraph, NodeId } from "../graph-data/types";
+import type { ModuleDependencyGraph, NodeId } from "../../graph-data/types";
 
-import { assignLayers, assignLayersFromRoot } from "./assign-layers";
+import { assignLayers, assignLayersFromRoot } from "../assign-layers";
 
 function graphOf(edges: [NodeId, NodeId][]): ModuleDependencyGraph {
   const nodes = new Map<NodeId, { id: NodeId; name: string; directory: string }>();

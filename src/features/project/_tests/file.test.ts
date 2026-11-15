@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toProjectFile } from "./file.ts";
+import { toProjectFile } from "../file.ts";
 
 const root = "/home/user/app";
 

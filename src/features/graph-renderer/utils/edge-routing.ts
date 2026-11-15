@@ -13,64 +13,6 @@ const PORT_MARGIN_PX = 10;
 const FAN_SPREAD_PX = 8;
 const LATERAL_BIAS_STEP = 3;
 
-function edgeKey(edge: LogicalEdge): string {
-  return `${edge.from}\u2192${edge.to}`;
-}
-
-export function centerX(node: Pick<LayoutRenderNode, "x" | "width">): number {
-  return node.width > 0 ? node.x + node.width / 2 : node.x;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-
-export function portTowardNeighbor(
-  node: LayoutRenderNode,
-  neighborCenterX: number,
-  border: "top" | "bottom",
-  index: number,
-  total: number,
-): Point {
-  const margin = Math.min(PORT_MARGIN_PX, Math.max(node.width * 0.1, 6));
-  const left = node.x + margin;
-  const right = node.x + node.width - margin;
-
-  let x = neighborCenterX;
-  if (total > 1) {
-    const spread = Math.min(FAN_SPREAD_PX, Math.max(node.width / (total + 2), 2));
-    x += (index - (total - 1) / 2) * spread;
-  }
-
-  return {
-    x: clamp(x, left, right),
-    y: border === "bottom" ? node.y + node.height : node.y,
-  };
-}
-
-function compareEdgesByTargetX(
-  left: LogicalEdge,
-  right: LogicalEdge,
-  nodeById: ReadonlyMap<string, LayoutRenderNode>,
-): number {
-  const leftX = centerX(nodeById.get(left.to)!);
-  const rightX = centerX(nodeById.get(right.to)!);
-  if (leftX !== rightX) return leftX - rightX;
-  return left.to.localeCompare(right.to);
-}
-
-function compareEdgesBySourceX(
-  left: LogicalEdge,
-  right: LogicalEdge,
-  nodeById: ReadonlyMap<string, LayoutRenderNode>,
-): number {
-  const leftX = centerX(nodeById.get(left.from)!);
-  const rightX = centerX(nodeById.get(right.from)!);
-  if (leftX !== rightX) return leftX - rightX;
-  return left.from.localeCompare(right.from);
-}
-
 export function buildEdgeRoutingProfiles(
   edges: readonly LogicalEdge[],
   nodeById: ReadonlyMap<string, LayoutRenderNode>,
@@ -118,4 +60,61 @@ export function buildEdgeRoutingProfiles(
   }
 
   return profiles;
+}
+
+function edgeKey(edge: LogicalEdge): string {
+  return `${edge.from}\u2192${edge.to}`;
+}
+
+function compareEdgesByTargetX(
+  left: LogicalEdge,
+  right: LogicalEdge,
+  nodeById: ReadonlyMap<string, LayoutRenderNode>,
+): number {
+  const leftX = centerX(nodeById.get(left.to)!);
+  const rightX = centerX(nodeById.get(right.to)!);
+  if (leftX !== rightX) return leftX - rightX;
+  return left.to.localeCompare(right.to);
+}
+
+function compareEdgesBySourceX(
+  left: LogicalEdge,
+  right: LogicalEdge,
+  nodeById: ReadonlyMap<string, LayoutRenderNode>,
+): number {
+  const leftX = centerX(nodeById.get(left.from)!);
+  const rightX = centerX(nodeById.get(right.from)!);
+  if (leftX !== rightX) return leftX - rightX;
+  return left.from.localeCompare(right.from);
+}
+
+export function portTowardNeighbor(
+  node: LayoutRenderNode,
+  neighborCenterX: number,
+  border: "top" | "bottom",
+  index: number,
+  total: number,
+): Point {
+  const margin = Math.min(PORT_MARGIN_PX, Math.max(node.width * 0.1, 6));
+  const left = node.x + margin;
+  const right = node.x + node.width - margin;
+
+  let x = neighborCenterX;
+  if (total > 1) {
+    const spread = Math.min(FAN_SPREAD_PX, Math.max(node.width / (total + 2), 2));
+    x += (index - (total - 1) / 2) * spread;
+  }
+
+  return {
+    x: clamp(x, left, right),
+    y: border === "bottom" ? node.y + node.height : node.y,
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function centerX(node: Pick<LayoutRenderNode, "x" | "width">): number {
+  return node.width > 0 ? node.x + node.width / 2 : node.x;
 }

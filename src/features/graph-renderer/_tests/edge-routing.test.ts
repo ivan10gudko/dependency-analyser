@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { LayoutRenderNode } from "../../hierarchical-graph-layout";
 
-import { buildEdgeRoutingProfiles, portTowardNeighbor } from "./edge-routing";
-import type { LogicalEdge } from "./logical-edges";
+import { buildEdgeRoutingProfiles, portTowardNeighbor } from "../utils/edge-routing";
+import type { LogicalEdge } from "../utils/logical-edges";
 
 function node(id: string, overrides: Partial<LayoutRenderNode> = {}): LayoutRenderNode {
   return {

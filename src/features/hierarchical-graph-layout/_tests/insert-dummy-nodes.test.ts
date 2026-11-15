@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { ModuleDependencyGraph, NodeId } from "../graph-data/types";
+import type { ModuleDependencyGraph, NodeId } from "../../graph-data/types";
 
-import { assignLayers } from "./assign-layers";
-import { createDummyNodes } from "./insert-dummy-nodes";
-import { DUMMY_NODE_PREFIX } from "./types";
+import { assignLayers } from "../assign-layers";
+import { createDummyNodes } from "../insert-dummy-nodes";
+import { DUMMY_NODE_PREFIX } from "../types";
 
 function graphOf(edges: [NodeId, NodeId][]): ModuleDependencyGraph {
   const nodes = new Map<NodeId, { id: NodeId; name: string; directory: string }>();

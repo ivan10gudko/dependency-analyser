@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { LayoutGraph, LayoutNode } from "./types";
+import type { LayoutGraph, LayoutNode } from "../types";
 
 import {
   computeGapForBoundary,
   countInterLayerEdges,
-} from "./compute-inter-layer-gap";
-import { assignYCoordinates } from "./assign-y-coordinates";
+} from "../compute-inter-layer-gap";
+import { assignYCoordinates } from "../assign-y-coordinates";
 
 describe("countInterLayerEdges", () => {
   it("counts only edges that advance exactly one layer", () => {
