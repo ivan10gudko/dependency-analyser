@@ -4,7 +4,8 @@ import type {
   LayoutRenderModel,
   LayoutScopeSummary,
 } from "../../hierarchical-graph-layout";
-import type { ProjectAnalysis } from "../types";
+import type { ModuleFileStats } from "../module-file-stats";
+import type { ModuleId, ProjectAnalysis } from "../types";
 
 export type InvokeError = {
   kind:
@@ -23,6 +24,7 @@ export type LoadingState = "idle" | "picking" | "scanning" | "reading" | "analyz
 export interface ProjectWorkspace {
   projectRootAbsolute: string | null;
   fileModuleIds: string[];
+  moduleFileStats: ReadonlyMap<ModuleId, ModuleFileStats>;
   analysis: ProjectAnalysis | null;
   dependencyGraph: ModuleDependencyGraph | null;
   layoutModel: LayoutRenderModel | null;

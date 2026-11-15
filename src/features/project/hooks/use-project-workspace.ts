@@ -9,7 +9,9 @@ import {
   type LayoutRenderModel,
   type LayoutScopeSummary,
 } from "../../hierarchical-graph-layout";
+import { buildModuleFileStatsMap, type ModuleFileStats } from "../module-file-stats";
 import { toProjectFile } from "../file";
+import type { ModuleId } from "../types";
 import type { ProjectAnalysis } from "../types";
 import type { InvokeError, LoadingState, ProjectWorkspace } from "../types/workspace";
 import type { ModuleDependencyGraph } from "../../graph-data/types";
@@ -29,6 +31,9 @@ type ProjectRoot = {
 export function useProjectWorkspace(): ProjectWorkspace {
   const [projectRootAbsolute, setProjectRootAbsolute] = useState<string | null>(null);
   const [fileModuleIds, setFileModuleIds] = useState<string[]>([]);
+  const [moduleFileStats, setModuleFileStats] = useState<ReadonlyMap<ModuleId, ModuleFileStats>>(
+    new Map(),
+  );
   const [analysis, setAnalysis] = useState<ProjectAnalysis | null>(null);
   const [dependencyGraph, setDependencyGraph] = useState<ModuleDependencyGraph | null>(null);
   const [layoutModel, setLayoutModel] = useState<LayoutRenderModel | null>(null);
@@ -41,6 +46,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
   const resetWorkspace = useCallback(() => {
     setProjectRootAbsolute(null);
     setFileModuleIds([]);
+    setModuleFileStats(new Map());
     setAnalysis(null);
     setDependencyGraph(null);
     setLayoutModel(null);
@@ -65,6 +71,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
     setLayoutError(null);
     setProjectRootAbsolute(null);
     setFileModuleIds([]);
+    setModuleFileStats(new Map());
     setLoading("picking");
 
     try {
@@ -86,6 +93,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
       );
       const moduleIds = projectFiles.map((file) => file.path);
       setFileModuleIds(moduleIds);
+      setModuleFileStats(buildModuleFileStatsMap(projectFiles));
 
       setLoading("analyzing");
       const projectAnalysis = await analyzeProject(projectFiles, {
@@ -121,6 +129,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
   return {
     projectRootAbsolute,
     fileModuleIds,
+    moduleFileStats,
     analysis,
     dependencyGraph,
     layoutModel,

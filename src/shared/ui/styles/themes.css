@@ -23,6 +23,10 @@
   --color-graph-node-fill: #ffffff;
   --color-graph-node-stroke: var(--color-accent);
   --color-graph-node-label: #1a1a1a;
+  --color-graph-node-focus-fill: #e8f4fd;
+  --color-graph-node-focus-stroke: var(--color-accent);
+  --color-graph-node-related-fill: #f3f9ff;
+  --color-graph-edge-highlight: var(--color-accent);
   --color-tree-icon: #14c9e1;
   --size-menubar: 35px;
   --font-ui: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -54,6 +58,10 @@
   --color-graph-node-fill: #2d2d2d;
   --color-graph-node-stroke: var(--color-accent);
   --color-graph-node-label: #e8e8e8;
+  --color-graph-node-focus-fill: #2a3f5f;
+  --color-graph-node-focus-stroke: var(--color-accent);
+  --color-graph-node-related-fill: #2d3542;
+  --color-graph-edge-highlight: var(--color-accent);
 }
 
 html,

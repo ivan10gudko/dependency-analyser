@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bfs,
+  bfsWithinDepth,
   cloneAdjacencyList,
   dfs,
   inDegrees,
@@ -18,6 +19,13 @@ const adjacency = new Map<string, string[]>([
 ]);
 
 const neighbors = neighborsFromAdjacencyList(adjacency);
+
+describe("bfsWithinDepth", () => {
+  it("limits hop count from the start node", () => {
+    const reached = bfsWithinDepth({ start: "A", neighbors, maxDepth: 1 });
+    expect([...reached].sort()).toEqual(["A", "B", "C"]);
+  });
+});
 
 describe("bfs", () => {
   it("visits nodes in breadth-first order", () => {

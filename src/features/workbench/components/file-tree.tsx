@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { IconButton, ListRow, ScrollArea } from "../../../shared/ui";
 import {
@@ -9,6 +9,7 @@ import {
 import {
   buildFileTree,
   defaultExpandedFolders,
+  folderAncestorIdsForModule,
   type FileTreeNode,
 } from "../model/build-file-tree";
 
@@ -33,6 +34,37 @@ export function FileTree({ moduleIds, selectedPath, onSelectFile }: FileTreeProp
     });
   };
 
+  useEffect(() => {
+    if (selectedPath === null) return;
+
+    const ancestors = folderAncestorIdsForModule(selectedPath);
+    if (ancestors.length === 0) return;
+
+    setExpanded((current) => {
+      const next = new Set(current);
+      let changed = false;
+      for (const folderId of ancestors) {
+        if (!next.has(folderId)) {
+          next.add(folderId);
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [selectedPath]);
+
+  useEffect(() => {
+    if (selectedPath === null) return;
+
+    const frame = requestAnimationFrame(() => {
+      const root = document.querySelector(".wb-tree-scroll");
+      if (!root) return;
+      const row = root.querySelector(`[data-tree-file="${cssEscape(selectedPath)}"]`);
+      row?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selectedPath, expanded]);
+
   return (
     <ScrollArea className="wb-tree-scroll">
       <div className="wb-tree">{tree.map((node) => renderNode(node, 0))}</div>
@@ -47,6 +79,7 @@ export function FileTree({ moduleIds, selectedPath, onSelectFile }: FileTreeProp
           interactive
           selected={selectedPath === node.id}
           className="wb-tree-row"
+          data-tree-file={node.id}
           style={{ paddingLeft: `${12 + depth * 14}px` }}
           onClick={() => onSelectFile(node.id)}
         >
@@ -78,4 +111,11 @@ export function FileTree({ moduleIds, selectedPath, onSelectFile }: FileTreeProp
       </div>
     );
   }
+}
+
+function cssEscape(value: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }

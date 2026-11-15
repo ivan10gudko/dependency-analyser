@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildFileTree } from "../build-file-tree";
+import { buildFileTree, folderAncestorIdsForModule } from "../build-file-tree";
 
 describe("buildFileTree", () => {
   it("nests paths and sorts folders before files", () => {
@@ -12,5 +12,19 @@ describe("buildFileTree", () => {
 
   it("returns empty for no files", () => {
     expect(buildFileTree([])).toEqual([]);
+  });
+});
+
+describe("folderAncestorIdsForModule", () => {
+  it("lists parent folders for a nested file path", () => {
+    expect(folderAncestorIdsForModule("features/graph-renderer/utils/view-box.ts")).toEqual([
+      "features",
+      "features/graph-renderer",
+      "features/graph-renderer/utils",
+    ]);
+  });
+
+  it("returns empty for a top-level file", () => {
+    expect(folderAncestorIdsForModule("index.ts")).toEqual([]);
   });
 });

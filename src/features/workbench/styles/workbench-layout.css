@@ -229,3 +229,103 @@
   font-size: 10px;
   font-family: var(--font-mono);
 }
+
+.wb-inspector-root {
+  max-height: calc(100dvh - var(--size-menubar) - 4rem);
+}
+
+.wb-inspector-section {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.wb-inspector-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-muted);
+}
+
+.wb-inspector-count {
+  font-weight: 500;
+  color: var(--color-fg-subtle);
+}
+
+.wb-inspector-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+
+.wb-inspector-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wb-inspector-toggle {
+  margin-top: 0.35rem;
+}
+
+.wb-module-link-name {
+  display: block;
+  font-size: 13px;
+  color: var(--color-fg);
+}
+
+.wb-module-link-path {
+  display: block;
+  font-size: 11px;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-metadata-grid {
+  display: grid;
+  grid-template-columns: minmax(5rem, 38%) 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0 0 0.75rem;
+  font-size: 12px;
+}
+
+.wb-metadata-grid dt {
+  margin: 0;
+  color: var(--color-fg-muted);
+}
+
+.wb-metadata-grid dd {
+  margin: 0;
+  color: var(--color-fg);
+  word-break: break-word;
+}
+
+.wb-metadata-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.wb-view-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.wb-view-intro,
+.wb-view-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+  line-height: 1.45;
+}

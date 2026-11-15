@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 
+import type { GraphFocusVisual } from "../../graph-interaction";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
+import { edgeKey } from "../../graph-interaction/model/focus-neighborhood";
 
 import "../graph-renderer.css";
 
@@ -15,6 +17,8 @@ export interface GraphRendererProps {
   padding?: number;
   viewBox?: string;
   fillContainer?: boolean;
+  focusVisual?: GraphFocusVisual | null;
+  onFocusModule?: (moduleId: string) => void;
 }
 
 export function GraphRenderer({
@@ -22,6 +26,8 @@ export function GraphRenderer({
   padding,
   viewBox: viewBoxProp,
   fillContainer = false,
+  focusVisual = null,
+  onFocusModule,
 }: GraphRendererProps) {
   const bounds = useMemo(
     () => computeLayoutBounds(layout.nodes, padding),
@@ -82,17 +88,31 @@ export function GraphRenderer({
 
       <g className="graph-edges">
         {logicalEdges.map((edge) => {
-          const edgeKey = `${edge.from}\u2192${edge.to}`;
-          const routing = routingProfiles.get(edgeKey);
+          const edgeKeyId = edgeKey(edge.from, edge.to);
+          const routing = routingProfiles.get(edgeKeyId);
           if (!routing) return null;
 
-          return <GraphEdge key={edgeKey} edge={edge} routing={routing} />;
+          const visualState = focusVisual?.edgeStateByKey.get(edgeKeyId) ?? "default";
+
+          return (
+            <GraphEdge
+              key={edgeKeyId}
+              edge={edge}
+              routing={routing}
+              visualState={visualState}
+            />
+          );
         })}
       </g>
 
       <g className="graph-nodes">
         {visibleNodes.map((node) => (
-          <GraphNode key={node.id} node={node} />
+          <GraphNode
+            key={node.id}
+            node={node}
+            visualState={focusVisual?.nodeStateById.get(node.id) ?? "default"}
+            onSelect={onFocusModule}
+          />
         ))}
       </g>
     </svg>

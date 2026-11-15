@@ -86,17 +86,56 @@
 }
 
 .graph-node {
-  transition: filter 0.12s ease;
+  transition: filter 0.12s ease, opacity 0.12s ease;
+  cursor: pointer;
 }
 
 .graph-node:hover {
   filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-accent) 45%, transparent));
 }
 
+.graph-node--dimmed {
+  opacity: 0.28;
+}
+
+.graph-node--dimmed:hover {
+  opacity: 0.42;
+}
+
+.graph-node--related .graph-node-box {
+  fill: var(--color-graph-node-related-fill);
+  stroke: color-mix(in srgb, var(--color-accent) 65%, var(--color-graph-node-stroke));
+  stroke-width: 1.5;
+}
+
+.graph-node--focus .graph-node-box {
+  fill: var(--color-graph-node-focus-fill);
+  stroke: var(--color-graph-node-focus-stroke);
+  stroke-width: 2;
+}
+
 .graph-node-box {
   fill: var(--color-graph-node-fill);
   stroke: var(--color-graph-node-stroke);
   stroke-width: 1.25;
+}
+
+.graph-edge--dimmed {
+  opacity: 0.12;
+}
+
+.graph-edge--dimmed:hover {
+  opacity: 0.35;
+}
+
+.graph-edge--highlighted {
+  opacity: 1;
+  stroke: var(--color-graph-edge-highlight);
+  stroke-width: 1.75;
+}
+
+.graph-edge--highlighted:hover {
+  stroke-width: 2;
 }
 
 .graph-node-label {

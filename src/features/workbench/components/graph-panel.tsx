@@ -1,3 +1,4 @@
+import { useGraphInteraction } from "../../graph-interaction";
 import { Button, EmptyState, Surface } from "../../../shared/ui";
 import { GraphViewport } from "../../graph-renderer";
 import type { LoadingState, ProjectWorkspace } from "../../project/types/workspace";
@@ -14,6 +15,8 @@ export interface GraphPanelProps {
 }
 
 export function GraphPanel({ workspace }: GraphPanelProps) {
+  const { focusedModuleId, focusVisual, focusModule, clearFocus } = useGraphInteraction();
+
   const showWelcome =
     !workspace.projectRootAbsolute && workspace.loading === "idle" && !workspace.error;
   const showLoading = workspace.loading !== "idle";
@@ -50,7 +53,13 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
       )}
 
       {showLayout && workspace.layoutModel && (
-        <GraphViewport layout={workspace.layoutModel} />
+        <GraphViewport
+          layout={workspace.layoutModel}
+          focusedModuleId={focusedModuleId}
+          focusVisual={focusVisual}
+          onFocusModule={focusModule}
+          onClearFocus={clearFocus}
+        />
       )}
 
       {showLoading && workspace.loading !== "idle" && (

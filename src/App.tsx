@@ -1,11 +1,22 @@
 import "./shared/ui/styles/ui.css";
 
-import { WorkbenchLayout } from "./features/workbench";
+import { GraphInteractionProvider } from "./features/graph-interaction";
 import { useProjectWorkspace } from "./features/project/hooks/use-project-workspace";
+import { WorkbenchLayout } from "./features/workbench";
 
 function App() {
   const workspace = useProjectWorkspace();
-  return <WorkbenchLayout workspace={workspace} />;
+
+  return (
+    <GraphInteractionProvider
+      dependencyGraph={workspace.dependencyGraph}
+      moduleFileStats={workspace.moduleFileStats}
+      projectRootAbsolute={workspace.projectRootAbsolute}
+      projectKey={workspace.projectRootAbsolute}
+    >
+      <WorkbenchLayout workspace={workspace} />
+    </GraphInteractionProvider>
+  );
 }
 
 export default App;

@@ -1,5 +1,4 @@
-import { useState } from "react";
-
+import { useGraphInteraction } from "../../graph-interaction";
 import { EmptyState, Surface } from "../../../shared/ui";
 import { fileNameOf, toPosix } from "../../../lib/path";
 import type { ProjectWorkspace } from "../../project/types/workspace";
@@ -11,7 +10,7 @@ export interface FileExplorerPanelProps {
 }
 
 export function FileExplorerPanel({ workspace }: FileExplorerPanelProps) {
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const { focusedModuleId, focusModule } = useGraphInteraction();
 
   const title =
     workspace.projectRootAbsolute != null
@@ -33,8 +32,8 @@ export function FileExplorerPanel({ workspace }: FileExplorerPanelProps) {
       ) : (
         <FileTree
           moduleIds={workspace.fileModuleIds}
-          selectedPath={selectedPath}
-          onSelectFile={setSelectedPath}
+          selectedPath={focusedModuleId}
+          onSelectFile={focusModule}
         />
       )}
     </Surface>

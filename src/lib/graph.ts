@@ -5,6 +5,33 @@ export interface TraverseOptions<T> {
   neighbors: NeighborsOf<T>;
 }
 
+export interface BfsDepthOptions<T> extends TraverseOptions<T> {
+  maxDepth: number;
+}
+
+export function bfsWithinDepth<T>({ start, neighbors, maxDepth }: BfsDepthOptions<T>): Set<T> {
+  const reached = new Set<T>([start]);
+  if (maxDepth < 0) return reached;
+  if (maxDepth === 0) return reached;
+
+  const queue: { node: T; depth: number }[] = [{ node: start, depth: 0 }];
+
+  while (queue.length > 0) {
+    const { node, depth } = queue.shift()!;
+    if (depth > maxDepth) continue;
+
+    for (const next of neighbors(node)) {
+      const nextDepth = depth + 1;
+      if (nextDepth > maxDepth) continue;
+      if (reached.has(next)) continue;
+      reached.add(next);
+      queue.push({ node: next, depth: nextDepth });
+    }
+  }
+
+  return reached;
+}
+
 export function bfs<T>({ start, neighbors }: TraverseOptions<T>): T[] {
   const order: T[] = [];
   const visited = new Set<T>([start]);

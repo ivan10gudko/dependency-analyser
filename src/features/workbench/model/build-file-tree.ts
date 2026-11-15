@@ -70,3 +70,15 @@ export function defaultExpandedFolders(moduleIds: readonly string[]): Set<string
   }
   return expanded;
 }
+
+// Folder node ids that must be open for `modulePath` to appear in the tree
+export function folderAncestorIdsForModule(modulePath: string): string[] {
+  const segments = modulePath.split("/").filter(Boolean);
+  if (segments.length <= 1) return [];
+
+  const folders: string[] = [];
+  for (let i = 1; i < segments.length; i++) {
+    folders.push(segments.slice(0, i).join("/"));
+  }
+  return folders;
+}

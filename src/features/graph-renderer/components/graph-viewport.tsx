@@ -4,14 +4,17 @@ import {
   useMemo,
   useRef,
   useState,
+  type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 
+import type { GraphFocusVisual } from "../../graph-interaction";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
 import { Button } from "../../../shared/ui";
 
 import { GraphRenderer } from "./graph-renderer";
+import { viewBoxForGraphFocus } from "../utils/focus-viewport";
 import { computeLayoutBounds } from "../utils/layout-bounds";
 import {
   formatViewBox,
@@ -25,15 +28,36 @@ import {
 const WHEEL_ZOOM_FACTOR = 1.12;
 const MIN_VIEW_WIDTH_RATIO = 0.08;
 const MAX_VIEW_WIDTH_RATIO = 8;
+const PAN_CLICK_THRESHOLD_PX = 4;
+
+interface PanDragState {
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  pointerId: number;
+}
 
 export interface GraphViewportProps {
   layout: LayoutRenderModel;
   padding?: number;
+  focusedModuleId?: string | null;
+  focusVisual?: GraphFocusVisual | null;
+  onFocusModule?: (moduleId: string) => void;
+  onClearFocus?: () => void;
 }
 
-export function GraphViewport({ layout, padding }: GraphViewportProps) {
+export function GraphViewport({
+  layout,
+  padding,
+  focusedModuleId = null,
+  focusVisual = null,
+  onFocusModule,
+  onClearFocus,
+}: GraphViewportProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const dragRef = useRef<PanDragState | null>(null);
+  const lastFramedFocusRef = useRef<string | null>(null);
 
   const baseViewBox = useMemo(() => {
     const bounds = computeLayoutBounds(layout.nodes, padding);
@@ -44,6 +68,7 @@ export function GraphViewport({ layout, padding }: GraphViewportProps) {
 
   useEffect(() => {
     setViewBox(baseViewBox);
+    lastFramedFocusRef.current = null;
   }, [baseViewBox]);
 
   const clampZoom = useCallback(
@@ -57,6 +82,27 @@ export function GraphViewport({ layout, padding }: GraphViewportProps) {
     },
     [baseViewBox],
   );
+
+  useEffect(() => {
+    if (focusedModuleId === null) {
+      lastFramedFocusRef.current = null;
+      return;
+    }
+    if (!focusVisual?.active) return;
+
+    const frameKey = `${focusedModuleId}:${[...collectHighlightKeyParts(focusVisual)].join("|")}`;
+    if (lastFramedFocusRef.current === frameKey) return;
+
+    const host = viewportRef.current;
+    if (!host || host.clientWidth <= 0 || host.clientHeight <= 0) return;
+
+    const aspect = host.clientWidth / host.clientHeight;
+    const proposed = viewBoxForGraphFocus(layout, focusVisual, aspect);
+    if (!proposed) return;
+
+    setViewBox(clampZoom(proposed));
+    lastFramedFocusRef.current = frameKey;
+  }, [clampZoom, focusVisual, focusedModuleId, layout]);
 
   const onWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -73,16 +119,22 @@ export function GraphViewport({ layout, padding }: GraphViewportProps) {
     [clampZoom],
   );
 
-  const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     event.preventDefault();
     window.getSelection()?.removeAllRanges();
     viewportRef.current?.setPointerCapture(event.pointerId);
-    dragRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+    dragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+    };
     event.currentTarget.classList.add("is-panning");
   }, []);
 
-  const onPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
 
@@ -98,12 +150,29 @@ export function GraphViewport({ layout, padding }: GraphViewportProps) {
     );
   }, []);
 
-  const endPan = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    event.currentTarget.classList.remove("is-panning");
-    viewportRef.current?.releasePointerCapture(event.pointerId);
-  }, []);
+  const finishPointer = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+      const distance = Math.hypot(dx, dy);
+
+      dragRef.current = null;
+      event.currentTarget.classList.remove("is-panning");
+      viewportRef.current?.releasePointerCapture(event.pointerId);
+
+      if (distance >= PAN_CLICK_THRESHOLD_PX || !onClearFocus) return;
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".graph-node")) return;
+
+      onClearFocus();
+    },
+    [onClearFocus],
+  );
 
   const zoomBy = useCallback(
     (factor: number) => {
@@ -151,13 +220,29 @@ export function GraphViewport({ layout, padding }: GraphViewportProps) {
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={endPan}
-        onPointerLeave={endPan}
-        onPointerCancel={endPan}
+        onPointerUp={finishPointer}
+        onPointerLeave={finishPointer}
+        onPointerCancel={finishPointer}
         onDragStart={(event) => event.preventDefault()}
       >
-        <GraphRenderer layout={layout} padding={padding} viewBox={formatViewBox(viewBox)} fillContainer />
+        <GraphRenderer
+          layout={layout}
+          padding={padding}
+          viewBox={formatViewBox(viewBox)}
+          fillContainer
+          focusVisual={focusVisual}
+          onFocusModule={onFocusModule}
+        />
       </div>
     </div>
   );
+}
+
+function collectHighlightKeyParts(focusVisual: GraphFocusVisual): string[] {
+  const parts: string[] = [];
+  for (const [id, state] of focusVisual.nodeStateById) {
+    if (state === "focus" || state === "related") parts.push(id);
+  }
+  parts.sort();
+  return parts;
 }
