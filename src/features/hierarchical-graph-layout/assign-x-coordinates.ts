@@ -177,7 +177,7 @@ export function addNode(
   if (right !== undefined) {
     const rightNode = graph.nodes.get(right)!;
     const rightIndex = layerNodes.indexOf(right);
-    maxX = (rightNode.x ?? 0) - rightNode.width;
+    maxX = (rightNode.x ?? 0) - horizontalGap - node.width;
 
     for (let index = nodeIndex + 1; index < rightIndex; index += 1) {
       const between = graph.nodes.get(layerNodes[index]!)!;
@@ -190,6 +190,29 @@ export function addNode(
   else if (x > maxX) x = maxX;
 
   node.x = x;
+}
+
+/** Pushes nodes rightward along layer order so boxes never overlap horizontally. */
+export function compactLayers(
+  graph: LayoutGraph,
+  layerOrder: LayerOrder,
+  horizontalGap: number,
+): void {
+  const lastLayer = maxLayerIndex(graph);
+
+  for (let layer = 1; layer <= lastLayer; layer += 1) {
+    const ids = layerOrder.get(layer);
+    if (!ids) continue;
+
+    for (let index = 1; index < ids.length; index += 1) {
+      const previous = graph.nodes.get(ids[index - 1]!)!;
+      const current = graph.nodes.get(ids[index]!)!;
+      if (previous.x === undefined || current.x === undefined) continue;
+
+      const minX = previous.x + previous.width + horizontalGap;
+      if (current.x < minX) current.x = minX;
+    }
+  }
 }
 
 // Left-most packing for layer 1 before the x down sweep.
@@ -289,5 +312,6 @@ export function assignDagX(
       initializeLayer1: index === 0,
     });
     dagUpSweep(graph, layerOrder, sweepOptions);
+    compactLayers(graph, layerOrder, gap);
   }
 }

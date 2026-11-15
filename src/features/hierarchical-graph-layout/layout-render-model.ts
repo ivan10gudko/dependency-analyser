@@ -2,8 +2,12 @@ import { inDegrees } from "../../lib/graph";
 import type { ModuleDependencyGraph, NodeId } from "../graph-data/types";
 
 import { assignLayers } from "./assign-layers";
+import { collectReachableFromRoot } from "./subgraph";
 import { assignDagX } from "./assign-x-coordinates";
-import { assignYCoordinates } from "./assign-y-coordinates";
+import {
+  assignYCoordinates,
+  type AssignYCoordinatesOptions,
+} from "./assign-y-coordinates";
 import { reduceCrossings } from "./crossing-reduction";
 import { createDummyNodes } from "./insert-dummy-nodes";
 import { buildInitialLayerOrder, type LayerOrder } from "./layer-order";
@@ -32,19 +36,70 @@ export interface LayoutRenderModel {
   layerOrder: Record<string, string[]>;
 }
 
+export interface LayoutScopeSummary {
+  root: NodeId;
+  totalModules: number;
+}
+
 export interface HierarchicalLayoutResult {
   layoutGraph: LayoutGraph;
   layerOrder: LayerOrder;
   model: LayoutRenderModel;
+  scope: LayoutScopeSummary;
 }
 
-export interface BuildHierarchicalLayoutOptions {
+export interface BuildHierarchicalLayoutOptions extends AssignYCoordinatesOptions {
   root?: NodeId;
   crossingPasses?: number;
   xIterations?: number;
 }
 
-const PREFERRED_ROOTS = ["src/App.tsx", "App.tsx"] as const;
+const PREFERRED_ROOTS = [
+  "src/main.tsx",
+  "src/main.ts",
+  "src/App.tsx",
+  "App.tsx",
+  "app/layout.tsx",
+  "app/page.tsx",
+  "src/app/layout.tsx",
+  "src/app/page.tsx",
+  "pages/_app.tsx",
+  "pages/index.tsx",
+  "src/pages/_app.tsx",
+  "src/pages/index.tsx",
+  "src/router.tsx",
+  "router.tsx",
+] as const;
+
+function isPoorRootCandidate(moduleId: NodeId): boolean {
+  if (/\.d\.ts$/i.test(moduleId)) return true;
+  if (/(^|\/)(next|vite)-env\.d\.ts$/i.test(moduleId)) return true;
+  if (/(^|\/)eslint\.config\./i.test(moduleId)) return true;
+  if (/(^|\/)(vite|vitest|webpack|rollup)\.config\./i.test(moduleId)) return true;
+  return false;
+}
+
+function reachableSize(graph: ModuleDependencyGraph, root: NodeId): number {
+  return collectReachableFromRoot(graph, root).size;
+}
+
+function pickLargestReachableRoot(
+  graph: ModuleDependencyGraph,
+  candidates: readonly NodeId[],
+): NodeId | undefined {
+  let best: NodeId | undefined;
+  let bestSize = 0;
+
+  for (const candidate of candidates) {
+    const size = reachableSize(graph, candidate);
+    if (size > bestSize) {
+      bestSize = size;
+      best = candidate;
+    }
+  }
+
+  return best;
+}
 
 export function pickLayoutRoot(graph: ModuleDependencyGraph): NodeId {
   for (const candidate of PREFERRED_ROOTS) {
@@ -53,11 +108,16 @@ export function pickLayoutRoot(graph: ModuleDependencyGraph): NodeId {
 
   const nodes = new Set(graph.nodes.keys());
   const indegree = inDegrees(nodes, graph.adjacencyList);
-  const sources = [...nodes]
-    .filter((node) => indegree.get(node) === 0)
-    .sort((left, right) => left.localeCompare(right));
+  const sources = [...nodes].filter(
+    (node) => indegree.get(node) === 0 && !isPoorRootCandidate(node),
+  );
 
-  if (sources.length > 0) return sources[0]!;
+  const fromSources = pickLargestReachableRoot(graph, sources);
+  if (fromSources !== undefined) return fromSources;
+
+  const remaining = [...nodes].filter((node) => !isPoorRootCandidate(node));
+  const fromRemaining = pickLargestReachableRoot(graph, remaining);
+  if (fromRemaining !== undefined) return fromRemaining;
 
   return [...nodes].sort((left, right) => left.localeCompare(right))[0]!;
 }
@@ -118,16 +178,20 @@ export function buildHierarchicalLayout(
   const layerOrder = buildInitialLayerOrder(layoutGraph);
 
   reduceCrossings(layoutGraph, layerOrder, {
-    passes: options?.crossingPasses ?? 2,
+    passes: options?.crossingPasses ?? 6,
   });
   assignDagX(layoutGraph, layerOrder, {
     iterations: options?.xIterations ?? 2,
   });
-  assignYCoordinates(layoutGraph);
+  assignYCoordinates(layoutGraph, options);
 
   return {
     layoutGraph,
     layerOrder,
     model: toLayoutRenderModel(layoutGraph, layerOrder),
+    scope: {
+      root,
+      totalModules: acyclic.nodes.size,
+    },
   };
 }

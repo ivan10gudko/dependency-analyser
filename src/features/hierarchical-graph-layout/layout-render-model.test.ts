@@ -36,7 +36,9 @@ describe("buildHierarchicalLayout", () => {
       ["B", "C"],
     ]);
 
-    const { model, layoutGraph } = buildHierarchicalLayout(graph, { root: "A" });
+    const { model, layoutGraph, scope } = buildHierarchicalLayout(graph, { root: "A" });
+
+    expect(scope.totalModules).toBe(3);
 
     expect(model.nodes).toHaveLength(3);
     expect(model.edges).toHaveLength(2);
@@ -50,6 +52,35 @@ describe("buildHierarchicalLayout", () => {
       const from = layoutGraph.nodes.get(edge.from)!;
       const to = layoutGraph.nodes.get(edge.to)!;
       expect(to.layer).toBe(from.layer + 1);
+    }
+  });
+
+  it("does not place module nodes on the same layer with horizontal overlap", () => {
+    const leaves = ["L1", "L2", "L3", "L4", "L5", "L6"] as const;
+    const edges: [NodeId, NodeId][] = [["root", "hub"]];
+    for (const leaf of leaves) {
+      edges.push(["hub", leaf]);
+    }
+
+    const graph = graphOf(edges);
+    const { model } = buildHierarchicalLayout(graph, { root: "root" });
+    const gap = 24;
+
+    const byLayer = new Map<number, typeof model.nodes>();
+    for (const node of model.nodes) {
+      if (node.isDummy) continue;
+      const bucket = byLayer.get(node.layer) ?? [];
+      bucket.push(node);
+      byLayer.set(node.layer, bucket);
+    }
+
+    for (const nodes of byLayer.values()) {
+      const ordered = [...nodes].sort((left, right) => left.x - right.x);
+      for (let index = 1; index < ordered.length; index += 1) {
+        const previous = ordered[index - 1]!;
+        const current = ordered[index]!;
+        expect(current.x).toBeGreaterThanOrEqual(previous.x + previous.width + gap - 0.001);
+      }
     }
   });
 });

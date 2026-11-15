@@ -34,6 +34,24 @@ export const DEFAULT_MODULE_NODE_SIZE: NodeDimensions = {
   height: 28,
 };
 
-export const DEFAULT_VERTICAL_LAYER_GAP = 40;
+const LABEL_CHAR_PX = 7.2;
+const NODE_HORIZONTAL_PADDING = 28;
+const MAX_MODULE_NODE_WIDTH = 320;
+
+/** Estimated SVG label width so layout leaves enough horizontal space per module. */
+export function moduleNodeWidthForLabel(
+  label: string,
+  minWidth = DEFAULT_MODULE_NODE_SIZE.width,
+): number {
+  const fromLabel = Math.ceil(label.length * LABEL_CHAR_PX) + NODE_HORIZONTAL_PADDING;
+  return Math.min(MAX_MODULE_NODE_WIDTH, Math.max(minWidth, fromLabel));
+}
+
+/** Space between layer baselines; larger gaps reduce edge overlap with Bézier routing. */
+export const DEFAULT_VERTICAL_LAYER_GAP = 96;
+
+export const DEFAULT_MAX_VERTICAL_LAYER_GAP = 192;
+export const DEFAULT_INTER_LAYER_EDGE_THRESHOLD = 8;
+export const DEFAULT_INTER_LAYER_EDGE_NORMALIZE = 24;
 
 export const DEFAULT_HORIZONTAL_NODE_OFFSET = 24;

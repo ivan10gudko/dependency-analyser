@@ -3,9 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { ConfigurationAnalyser } from "./features/configuration-analyser";
 import { buildModuleDependencyGraphFromAnalysis } from "./features/graph-data";
+import { GraphViewport } from "./features/graph-renderer";
 import {
   buildHierarchicalLayout,
   type LayoutRenderModel,
+  type LayoutScopeSummary,
 } from "./features/hierarchical-graph-layout";
 import { toProjectFile } from "./features/project/file";
 import type { ProjectAnalysis } from "./features/project/types";
@@ -42,6 +44,7 @@ function App() {
   );
   const [analysis, setAnalysis] = useState<ProjectAnalysis | null>(null);
   const [layoutModel, setLayoutModel] = useState<LayoutRenderModel | null>(null);
+  const [layoutScope, setLayoutScope] = useState<LayoutScopeSummary | null>(null);
   const [error, setError] = useState<InvokeError | null>(null);
   const [loading, setLoading] = useState<LoadingState>("idle");
   const isBusy = loading !== "idle";
@@ -50,6 +53,7 @@ function App() {
     setError(null);
     setAnalysis(null);
     setLayoutModel(null);
+    setLayoutScope(null);
     setProjectRootAbsolute(null);
     setLoading("picking");
 
@@ -78,11 +82,14 @@ function App() {
       });
       setAnalysis(projectAnalysis);
       const dependencyGraph = buildModuleDependencyGraphFromAnalysis(projectAnalysis);
-      setLayoutModel(buildHierarchicalLayout(dependencyGraph).model);
+      const layout = buildHierarchicalLayout(dependencyGraph);
+      setLayoutModel(layout.model);
+      setLayoutScope(layout.scope);
     } catch (e) {
       setProjectRootAbsolute(null);
       setAnalysis(null);
       setLayoutModel(null);
+      setLayoutScope(null);
       setError(e as InvokeError);
     } finally {
       setLoading("idle");
@@ -90,54 +97,63 @@ function App() {
   }
 
   return (
-    <main className="container">
-      <h1>dependency analyser</h1>
-      <button onClick={openProject} disabled={isBusy}>
-        {loading === "picking"
-          ? "Choosing folder…"
-          : loading === "scanning"
-            ? "Scanning files…"
-            : loading === "reading"
-              ? "Reading files…"
-              : loading === "analyzing"
-                ? "Analyzing…"
-                : "Open project"}
-      </button>
+    <main className={layoutModel ? "app-shell app-shell--graph" : "container"}>
+      <header className="app-toolbar">
+        <h1>dependency analyser</h1>
+        <button onClick={openProject} disabled={isBusy}>
+          {loading === "picking"
+            ? "Choosing folder…"
+            : loading === "scanning"
+              ? "Scanning files…"
+              : loading === "reading"
+                ? "Reading files…"
+                : loading === "analyzing"
+                  ? "Analyzing…"
+                  : "Open project"}
+        </button>
 
-      {error && (
-        <p role="alert">
-          {error.kind}: {error.message}
-        </p>
-      )}
+        {error && (
+          <p className="app-error" role="alert">
+            {error.kind}: {error.message}
+          </p>
+        )}
 
-      {projectRootAbsolute && (
-        <p className="project-root">Project: {projectRootAbsolute}</p>
-      )}
+        {projectRootAbsolute && (
+          <p className="project-root">Project: {projectRootAbsolute}</p>
+        )}
 
-      {loading === "reading" && <p>Reading files…</p>}
-      {loading === "analyzing" && <p>Analyzing project…</p>}
+        {loading === "reading" && <p>Reading files…</p>}
+        {loading === "analyzing" && <p>Analyzing project…</p>}
 
-      {analysis && (
-        <section className="analysis">
-          <p>Files: {analysis.stats.fileCount}</p>
-          <p>Modules: {analysis.stats.moduleCount}</p>
-          <p>Imports: {analysis.stats.totalDependencies}</p>
-          {layoutModel && (
-            <>
-              <p>
-                Layout: {layoutModel.nodes.length} nodes, {layoutModel.edges.length}{" "}
-                edges
-              </p>
-              <details open className="layout-details">
-                <summary>Layout JSON (for renderer)</summary>
+        {analysis && (
+          <div className="analysis-stats">
+            <span>Files: {analysis.stats.fileCount}</span>
+            <span>Modules: {analysis.stats.moduleCount}</span>
+            <span>Imports: {analysis.stats.totalDependencies}</span>
+            {layoutModel && layoutScope && (
+              <>
+                <span>
+                  Graph: {layoutModel.edges.length} edges · {layoutScope.totalModules}{" "}
+                  modules
+                </span>
+                <span className="layout-scope-root" title="Cycle-break root">
+                  layout root: {layoutScope.root}
+                </span>
+              </>
+            )}
+            {layoutModel && (
+              <details className="layout-details layout-details--inline">
+                <summary>Layout JSON</summary>
                 <pre className="layout-json">
                   {JSON.stringify(layoutModel, null, 2)}
                 </pre>
               </details>
-            </>
-          )}
-        </section>
-      )}
+            )}
+          </div>
+        )}
+      </header>
+
+      {layoutModel && <GraphViewport layout={layoutModel} />}
     </main>
   );
 }

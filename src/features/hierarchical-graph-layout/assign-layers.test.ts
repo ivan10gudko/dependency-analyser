@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ModuleDependencyGraph, NodeId } from "../graph-data/types";
 
-import { assignLayers } from "./assign-layers";
+import { assignLayers, assignLayersFromRoot } from "./assign-layers";
 
 function graphOf(edges: [NodeId, NodeId][]): ModuleDependencyGraph {
   const nodes = new Map<NodeId, { id: NodeId; name: string; directory: string }>();
@@ -88,6 +88,23 @@ describe("assignLayers", () => {
     expect(layers.get("A")).toBe(1);
     expect(layers.get("B")).toBe(1);
     expect(layers.get("C")).toBe(2);
+  });
+
+  it("assigns deepest descendants lower when layering from root", () => {
+    const graph = graphOf([
+      ["root", "A"],
+      ["root", "B"],
+      ["A", "shared"],
+      ["B", "shared"],
+    ]);
+
+    const layers = assignLayersFromRoot(graph, "root");
+
+    expect(layers.get("root")).toBe(1);
+    expect(layers.get("A")).toBe(2);
+    expect(layers.get("B")).toBe(2);
+    expect(layers.get("shared")).toBe(3);
+    assertLayerOrder(graph, layers);
   });
 
   it("satisfies the edge layering postcondition on the Figure 6.2 DAG", () => {

@@ -55,3 +55,66 @@ export function assignLayers(graph: ModuleDependencyGraph): NodeLayers {
 
   return layers;
 }
+
+/**
+ * Longest-path layering from a single root within the (already scoped) graph.
+ */
+export function assignLayersFromRoot(
+  graph: ModuleDependencyGraph,
+  root: NodeId,
+): NodeLayers {
+  if (!graph.nodes.has(root)) {
+    throw new Error(`unknown layout root ${root}`);
+  }
+
+  const nodes = new Set(graph.nodes.keys());
+  const predecessors = predecessorsFromAdjacencyList(nodes, graph.adjacencyList);
+  const reachable = new Set<NodeId>([root]);
+  const queue: NodeId[] = [root];
+
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    for (const successor of graph.adjacencyList.get(node) ?? []) {
+      if (!reachable.has(successor)) {
+        reachable.add(successor);
+        queue.push(successor);
+      }
+    }
+  }
+
+  const layers: NodeLayers = new Map();
+  layers.set(root, 1);
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    for (const node of reachable) {
+      if (node === root) continue;
+
+      let maxPredLayer = 0;
+      for (const pred of predecessors.get(node) ?? []) {
+        if (!reachable.has(pred)) continue;
+        const predLayer = layers.get(pred);
+        if (predLayer === undefined) continue;
+        maxPredLayer = Math.max(maxPredLayer, predLayer);
+      }
+
+      if (maxPredLayer === 0) continue;
+
+      const nextLayer = maxPredLayer + 1;
+      if ((layers.get(node) ?? 0) < nextLayer) {
+        layers.set(node, nextLayer);
+        changed = true;
+      }
+    }
+  }
+
+  for (const node of reachable) {
+    if (!layers.has(node)) {
+      layers.set(node, 2);
+    }
+  }
+
+  return layers;
+}

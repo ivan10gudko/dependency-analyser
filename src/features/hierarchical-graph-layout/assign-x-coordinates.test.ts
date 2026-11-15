@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { LayoutGraph, LayoutNode } from "./types";
 
-import { addNode, assignDagX, dagDownSweep, dagUpSweep } from "./assign-x-coordinates";
+import {
+  addNode,
+  assignDagX,
+  compactLayers,
+  dagDownSweep,
+  dagUpSweep,
+} from "./assign-x-coordinates";
 import { buildInitialLayerOrder } from "./layer-order";
 
 function layoutWith(nodes: LayoutNode[], edges: [string, string][]): LayoutGraph {
@@ -30,7 +36,7 @@ describe("addNode", () => {
     graph.nodes.get("X")!.x = undefined;
     addNode(graph, order, 2, "X", 500, 20);
 
-    expect(graph.nodes.get("X")!.x).toBeLessThanOrEqual(200 - 40);
+    expect(graph.nodes.get("X")!.x).toBeLessThanOrEqual(200 - 40 - 20);
     expect(graph.nodes.get("X")!.x!).toBeGreaterThanOrEqual(40 + 20);
   });
 });
@@ -100,6 +106,25 @@ describe("dagUpSweep", () => {
     dagUpSweep(graph, order, { horizontalNodeOffset: 0 });
 
     expect(graph.nodes.get("B")!.x).toBe(80);
+  });
+});
+
+describe("compactLayers", () => {
+  it("separates overlapping nodes on the same layer", () => {
+    const graph = layoutWith(
+      [
+        { id: "A", isDummy: false, layer: 2, width: 160, height: 0, x: 0 },
+        { id: "B", isDummy: false, layer: 2, width: 160, height: 0, x: 40 },
+        { id: "C", isDummy: false, layer: 2, width: 160, height: 0, x: 80 },
+      ],
+      [],
+    );
+    const order = new Map([[2, ["A", "B", "C"]]] as const);
+
+    compactLayers(graph, order, 24);
+
+    expect(graph.nodes.get("B")!.x).toBe(184);
+    expect(graph.nodes.get("C")!.x).toBe(368);
   });
 });
 

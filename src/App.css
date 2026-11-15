@@ -21,6 +21,12 @@
   -webkit-text-size-adjust: 100%;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 .container {
   margin: 0 auto;
   padding: 10vh 1.5rem 2rem;
@@ -29,6 +35,71 @@
   flex-direction: column;
   align-items: stretch;
   text-align: center;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.app-shell--graph {
+  overflow: hidden;
+}
+
+.app-toolbar {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #d8d8d8;
+  background: #f6f6f6;
+  color: #0f0f0f;
+}
+
+.app-toolbar h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  text-align: left;
+  color: inherit;
+}
+
+.app-toolbar .analysis-stats,
+.app-toolbar .project-root,
+.app-toolbar p {
+  color: inherit;
+}
+
+.app-toolbar details summary {
+  color: inherit;
+  cursor: pointer;
+}
+
+.app-error {
+  margin: 0.5rem 0 0;
+}
+
+.analysis-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  align-items: baseline;
+}
+
+.layout-scope-root {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.layout-details--inline {
+  margin: 0;
 }
 
 .project-root {
@@ -174,6 +245,18 @@ button {
   }
   button:active {
     background-color: #0f0f0f69;
+  }
+
+  .app-toolbar {
+    background: #1c1c1c;
+    border-bottom-color: #444;
+    color: #ececec;
+  }
+
+  .layout-json {
+    color: #e8e8e8;
+    background: #2a2a2a;
+    border-color: #444;
   }
 
   .analysis pre {

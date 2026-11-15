@@ -5,6 +5,7 @@ import type { NodeLayers } from "./assign-layers";
 import {
   DEFAULT_MODULE_NODE_SIZE,
   DUMMY_NODE_PREFIX,
+  moduleNodeWidthForLabel,
   type LayoutGraph,
   type LayoutNode,
   type LayoutNodeId,
@@ -25,7 +26,7 @@ function layoutNodeFromModule(
     isDummy: false,
     module,
     layer,
-    width: size.width,
+    width: moduleNodeWidthForLabel(module.name, size.width),
     height: size.height,
   };
 }
