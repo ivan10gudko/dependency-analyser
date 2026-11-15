@@ -9,6 +9,8 @@ import {
 
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
+import { Button } from "../../../shared/ui";
+
 import { GraphRenderer } from "./graph-renderer";
 import { computeLayoutBounds } from "../utils/layout-bounds";
 import {
@@ -121,15 +123,25 @@ export function GraphViewport({ layout, padding }: GraphViewportProps) {
   return (
     <div className="graph-viewport-shell">
       <div className="graph-viewport-toolbar">
-        <button type="button" onClick={() => zoomBy(1 / WHEEL_ZOOM_FACTOR)} aria-label="Zoom in">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => zoomBy(1 / WHEEL_ZOOM_FACTOR)}
+          aria-label="Zoom in"
+        >
           +
-        </button>
-        <button type="button" onClick={() => zoomBy(WHEEL_ZOOM_FACTOR)} aria-label="Zoom out">
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => zoomBy(WHEEL_ZOOM_FACTOR)}
+          aria-label="Zoom out"
+        >
           −
-        </button>
-        <button type="button" onClick={resetView}>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={resetView}>
           Reset
-        </button>
+        </Button>
         <span className="graph-viewport-hint">Коліщатко — zoom, перетягування — pan</span>
       </div>
 

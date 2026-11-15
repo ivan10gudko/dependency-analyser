@@ -18,22 +18,15 @@
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   flex-shrink: 0;
-  border-bottom: 1px solid #d8d8d8;
-  background: #ffffff;
-  color: #0f0f0f;
-}
-
-.graph-viewport-toolbar button {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.9rem;
-  line-height: 1.2;
-  min-width: 2.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-fg);
 }
 
 .graph-viewport-hint {
   margin-left: auto;
   font-size: 0.8rem;
-  color: #5a5a5a;
+  color: var(--color-fg-muted);
 }
 
 .graph-viewport {
@@ -42,7 +35,7 @@
   min-height: 0;
   overflow: hidden;
   cursor: grab;
-  background: #eeeeee;
+  background: var(--color-graph-viewport);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -56,7 +49,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  background: #fafafa;
+  background: var(--color-graph-canvas);
   border: none;
   border-radius: 0;
   user-select: none;
@@ -69,7 +62,7 @@
 }
 
 .graph-edge {
-  stroke: #7a8699;
+  stroke: var(--color-graph-edge);
   stroke-width: 1;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -80,16 +73,16 @@
 .graph-edge:hover {
   opacity: 1;
   stroke-width: 1.5;
-  stroke: #396cd8;
+  stroke: var(--color-graph-edge-hover);
 }
 
 .graph-edge-marker path {
-  fill: #7a8699;
+  fill: var(--color-graph-edge);
 }
 
 .graph-edge:hover + .graph-edge-marker,
 .dependency-graph:has(.graph-edge:hover) .graph-edge-marker path {
-  fill: #396cd8;
+  fill: var(--color-graph-edge-hover);
 }
 
 .graph-node {
@@ -97,35 +90,19 @@
 }
 
 .graph-node:hover {
-  filter: drop-shadow(0 0 2px rgba(57, 108, 216, 0.45));
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-accent) 45%, transparent));
 }
 
 .graph-node-box {
-  fill: #ffffff;
-  stroke: #396cd8;
+  fill: var(--color-graph-node-fill);
+  stroke: var(--color-graph-node-stroke);
   stroke-width: 1.25;
 }
 
 .graph-node-label {
-  fill: #1a1a1a;
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  fill: var(--color-graph-node-label);
+  font-family: var(--font-ui);
   font-size: 12px;
   pointer-events: none;
   user-select: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .graph-viewport-toolbar {
-    background: #1c1c1c;
-    border-bottom-color: #444;
-    color: #ececec;
-  }
-
-  .graph-viewport-hint {
-    color: #b0b0b0;
-  }
-
-  .graph-viewport {
-    background: #2a2a2a;
-  }
 }

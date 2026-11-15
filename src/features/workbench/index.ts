@@ -1,0 +1,1 @@
+export { WorkbenchLayout, type WorkbenchLayoutProps } from "./components/workbench-layout";
