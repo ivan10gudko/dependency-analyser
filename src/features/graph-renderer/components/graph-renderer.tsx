@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { GraphFocusVisual } from "../../graph-interaction";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
@@ -18,7 +18,7 @@ export interface GraphRendererProps {
   viewBox?: string;
   fillContainer?: boolean;
   focusVisual?: GraphFocusVisual | null;
-  onFocusModule?: (moduleId: string) => void;
+  onNodePointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
 }
 
 export function GraphRenderer({
@@ -27,7 +27,7 @@ export function GraphRenderer({
   viewBox: viewBoxProp,
   fillContainer = false,
   focusVisual = null,
-  onFocusModule,
+  onNodePointerDown,
 }: GraphRendererProps) {
   const bounds = useMemo(
     () => computeLayoutBounds(layout.nodes, padding),
@@ -111,7 +111,7 @@ export function GraphRenderer({
             key={node.id}
             node={node}
             visualState={focusVisual?.nodeStateById.get(node.id) ?? "default"}
-            onSelect={onFocusModule}
+            onPointerDown={onNodePointerDown}
           />
         ))}
       </g>

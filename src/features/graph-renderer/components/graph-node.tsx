@@ -1,13 +1,15 @@
+import type { PointerEvent as ReactPointerEvent } from "react";
+
 import type { LayoutRenderNode } from "../../hierarchical-graph-layout";
 import type { NodeVisualState } from "../../graph-interaction";
 
 export interface GraphNodeProps {
   node: LayoutRenderNode;
   visualState?: NodeVisualState;
-  onSelect?: (moduleId: string) => void;
+  onPointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
 }
 
-export function GraphNode({ node, visualState = "default", onSelect }: GraphNodeProps) {
+export function GraphNode({ node, visualState = "default", onPointerDown }: GraphNodeProps) {
   if (node.isDummy) return null;
 
   const label = displayLabel(node);
@@ -21,10 +23,7 @@ export function GraphNode({ node, visualState = "default", onSelect }: GraphNode
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         event.stopPropagation();
-      }}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect?.(node.id);
+        onPointerDown?.(event);
       }}
     >
       <rect

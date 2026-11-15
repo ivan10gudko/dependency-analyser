@@ -16,6 +16,7 @@ import { Button } from "../../../shared/ui";
 import { GraphRenderer } from "./graph-renderer";
 import { viewBoxForGraphFocus } from "../utils/focus-viewport";
 import { computeLayoutBounds } from "../utils/layout-bounds";
+import { applyNodeOffsets, screenDeltaToViewDelta, type NodeOffset } from "../utils/node-offsets";
 import {
   formatViewBox,
   panViewBoxByPixels,
@@ -29,14 +30,28 @@ const WHEEL_ZOOM_FACTOR = 1.12;
 const MIN_VIEW_WIDTH_RATIO = 0.08;
 const MAX_VIEW_WIDTH_RATIO = 8;
 const PAN_CLICK_THRESHOLD_PX = 4;
+const EMPTY_NODE_OFFSETS: ReadonlyMap<string, NodeOffset> = new Map();
 
 interface PanDragState {
+  kind: "pan";
   startX: number;
   startY: number;
   x: number;
   y: number;
   pointerId: number;
 }
+
+interface NodeDragState {
+  kind: "node";
+  moduleId: string;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  pointerId: number;
+}
+
+type ViewportDragState = PanDragState | NodeDragState;
 
 export interface GraphViewportProps {
   layout: LayoutRenderModel;
@@ -56,7 +71,7 @@ export function GraphViewport({
   onClearFocus,
 }: GraphViewportProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<PanDragState | null>(null);
+  const dragRef = useRef<ViewportDragState | null>(null);
   const lastFramedFocusRef = useRef<string | null>(null);
 
   const baseViewBox = useMemo(() => {
@@ -65,6 +80,24 @@ export function GraphViewport({
   }, [layout.nodes, padding]);
 
   const [viewBox, setViewBox] = useState<ViewBoxRect>(baseViewBox);
+  const viewBoxRef = useRef(viewBox);
+  viewBoxRef.current = viewBox;
+
+  const [offsetState, setOffsetState] = useState<{
+    layout: LayoutRenderModel;
+    offsets: ReadonlyMap<string, NodeOffset>;
+  }>({ layout, offsets: EMPTY_NODE_OFFSETS });
+  if (offsetState.layout !== layout) {
+    setOffsetState({ layout, offsets: EMPTY_NODE_OFFSETS });
+  }
+  const activeOffsets =
+    offsetState.layout === layout ? offsetState.offsets : EMPTY_NODE_OFFSETS;
+
+  const displayLayout = useMemo((): LayoutRenderModel => {
+    const nodes = applyNodeOffsets(layout.nodes, activeOffsets);
+    if (nodes === layout.nodes) return layout;
+    return { ...layout, nodes: [...nodes] };
+  }, [activeOffsets, layout]);
 
   useEffect(() => {
     setViewBox(baseViewBox);
@@ -97,12 +130,12 @@ export function GraphViewport({
     if (!host || host.clientWidth <= 0 || host.clientHeight <= 0) return;
 
     const aspect = host.clientWidth / host.clientHeight;
-    const proposed = viewBoxForGraphFocus(layout, focusVisual, aspect);
+    const proposed = viewBoxForGraphFocus(displayLayout, focusVisual, aspect);
     if (!proposed) return;
 
     setViewBox(clampZoom(proposed));
     lastFramedFocusRef.current = frameKey;
-  }, [clampZoom, focusVisual, focusedModuleId, layout]);
+  }, [clampZoom, displayLayout, focusVisual, focusedModuleId]);
 
   const onWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -125,6 +158,7 @@ export function GraphViewport({
     window.getSelection()?.removeAllRanges();
     viewportRef.current?.setPointerCapture(event.pointerId);
     dragRef.current = {
+      kind: "pan",
       startX: event.clientX,
       startY: event.clientY,
       x: event.clientX,
@@ -132,6 +166,25 @@ export function GraphViewport({
       pointerId: event.pointerId,
     };
     event.currentTarget.classList.add("is-panning");
+  }, []);
+
+  const onNodePointerDown = useCallback((event: ReactPointerEvent<SVGGElement>) => {
+    const moduleId = event.currentTarget.dataset.moduleId;
+    if (!moduleId) return;
+
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    viewportRef.current?.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      kind: "node",
+      moduleId,
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+    };
+    viewportRef.current?.classList.add("is-dragging-node");
   }, []);
 
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
@@ -144,6 +197,29 @@ export function GraphViewport({
     const deltaX = event.clientX - drag.x;
     const deltaY = event.clientY - drag.y;
     dragRef.current = { ...drag, x: event.clientX, y: event.clientY };
+
+    if (drag.kind === "node") {
+      const delta = screenDeltaToViewDelta(
+        deltaX,
+        deltaY,
+        viewBoxRef.current,
+        bounds.width,
+        bounds.height,
+      );
+      if (delta.dx === 0 && delta.dy === 0) return;
+
+      const moduleId = drag.moduleId;
+      setOffsetState((current) => {
+        const previous = current.offsets.get(moduleId) ?? { dx: 0, dy: 0 };
+        const next = new Map(current.offsets);
+        next.set(moduleId, {
+          dx: previous.dx + delta.dx,
+          dy: previous.dy + delta.dy,
+        });
+        return { layout: current.layout, offsets: next };
+      });
+      return;
+    }
 
     setViewBox((current) =>
       panViewBoxByPixels(current, deltaX, deltaY, bounds.width, bounds.height),
@@ -160,8 +236,13 @@ export function GraphViewport({
       const distance = Math.hypot(dx, dy);
 
       dragRef.current = null;
-      event.currentTarget.classList.remove("is-panning");
+      viewportRef.current?.classList.remove("is-panning", "is-dragging-node");
       viewportRef.current?.releasePointerCapture(event.pointerId);
+
+      if (drag.kind === "node") {
+        if (distance < PAN_CLICK_THRESHOLD_PX) onFocusModule?.(drag.moduleId);
+        return;
+      }
 
       if (distance >= PAN_CLICK_THRESHOLD_PX || !onClearFocus) return;
 
@@ -171,7 +252,7 @@ export function GraphViewport({
 
       onClearFocus();
     },
-    [onClearFocus],
+    [onClearFocus, onFocusModule],
   );
 
   const zoomBy = useCallback(
@@ -187,7 +268,8 @@ export function GraphViewport({
 
   const resetView = useCallback(() => {
     setViewBox(baseViewBox);
-  }, [baseViewBox]);
+    setOffsetState({ layout, offsets: EMPTY_NODE_OFFSETS });
+  }, [baseViewBox, layout]);
 
   return (
     <div className="graph-viewport-shell">
@@ -211,7 +293,9 @@ export function GraphViewport({
         <Button size="sm" variant="ghost" onClick={resetView}>
           Reset
         </Button>
-        <span className="graph-viewport-hint">Коліщатко — zoom, перетягування — pan</span>
+        <span className="graph-viewport-hint">
+          Коліщатко — zoom, фон — pan, вершина — перетягування
+        </span>
       </div>
 
       <div
@@ -226,12 +310,12 @@ export function GraphViewport({
         onDragStart={(event) => event.preventDefault()}
       >
         <GraphRenderer
-          layout={layout}
+          layout={displayLayout}
           padding={padding}
           viewBox={formatViewBox(viewBox)}
           fillContainer
           focusVisual={focusVisual}
-          onFocusModule={onFocusModule}
+          onNodePointerDown={onNodePointerDown}
         />
       </div>
     </div>

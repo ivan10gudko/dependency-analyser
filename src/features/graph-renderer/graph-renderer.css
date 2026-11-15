@@ -41,7 +41,9 @@
   -webkit-user-select: none;
 }
 
-.graph-viewport.is-panning {
+.graph-viewport.is-panning,
+.graph-viewport.is-dragging-node,
+.graph-viewport.is-dragging-node .graph-node {
   cursor: grabbing;
 }
 
@@ -87,7 +89,7 @@
 
 .graph-node {
   transition: filter 0.12s ease, opacity 0.12s ease;
-  cursor: pointer;
+  cursor: grab;
 }
 
 .graph-node:hover {
