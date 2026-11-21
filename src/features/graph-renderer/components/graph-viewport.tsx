@@ -16,21 +16,30 @@ import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 import { Button } from "../../../shared/ui";
 
 import { GraphRenderer } from "./graph-renderer";
-import { viewBoxForGraphFocus } from "../utils/focus-viewport";
+import {
+  resolveFocusFramePlan,
+  type FocusFramePlan,
+} from "../utils/focus-viewport";
 import { computeLayoutBounds } from "../utils/layout-bounds";
 import { applyNodeOffsets, screenDeltaToViewDelta, type NodeOffset } from "../utils/node-offsets";
 import {
+  clampViewBoxZoom,
+  easeInOutCubic,
   formatViewBox,
+  lerpViewBox,
   panViewBoxByPixels,
   parseViewBox,
   screenToViewPoint,
+  TOOLBAR_WHEEL_DELTA_PX,
+  wheelZoomScaleFactor,
   zoomViewBoxAt,
   type ViewBoxRect,
 } from "../utils/view-box";
 
-const WHEEL_ZOOM_FACTOR = 1.12;
-const MIN_VIEW_WIDTH_RATIO = 0.08;
-const MAX_VIEW_WIDTH_RATIO = 8;
+const FOCUS_FRAME_DIRECT_MS = 480;
+const FOCUS_REVEAL_OUT_MS = 720;
+const FOCUS_REVEAL_HOLD_MS = 650;
+const FOCUS_REVEAL_IN_MS = 360;
 const PAN_CLICK_THRESHOLD_PX = 4;
 const BARREL_DOUBLE_CLICK_MS = 450;
 const EMPTY_NODE_OFFSETS: ReadonlyMap<string, NodeOffset> = new Map();
@@ -85,6 +94,8 @@ export function GraphViewport({
   const dragRef = useRef<ViewportDragState | null>(null);
   const lastFramedFocusRef = useRef<string | null>(null);
   const lastBarrelTapRef = useRef<{ id: string; at: number } | null>(null);
+  const focusFrameAnimationRef = useRef<number | null>(null);
+  const focusRevealHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const baseViewBox = useMemo(() => {
     const bounds = computeLayoutBounds(layout.nodes, padding);
@@ -112,21 +123,71 @@ export function GraphViewport({
   }, [activeOffsets, layout]);
 
   useEffect(() => {
-    if (focusedModuleId !== null) return;
     setViewBox(baseViewBox);
     lastFramedFocusRef.current = null;
-  }, [baseViewBox, focusedModuleId]);
+  }, [baseViewBox]);
 
   const clampZoom = useCallback(
-    (rect: ViewBoxRect): ViewBoxRect => {
-      const minWidth = baseViewBox.width * MIN_VIEW_WIDTH_RATIO;
-      const maxWidth = baseViewBox.width * MAX_VIEW_WIDTH_RATIO;
-      const width = Math.min(maxWidth, Math.max(minWidth, rect.width));
-      const scale = width / rect.width;
-
-      return zoomViewBoxAt(rect, scale, rect.x + rect.width / 2, rect.y + rect.height / 2);
-    },
+    (rect: ViewBoxRect): ViewBoxRect => clampViewBoxZoom(rect, baseViewBox),
     [baseViewBox],
+  );
+
+  const cancelFocusFrameAnimation = useCallback(() => {
+    if (focusFrameAnimationRef.current !== null) {
+      cancelAnimationFrame(focusFrameAnimationRef.current);
+      focusFrameAnimationRef.current = null;
+    }
+    if (focusRevealHoldTimerRef.current !== null) {
+      clearTimeout(focusRevealHoldTimerRef.current);
+      focusRevealHoldTimerRef.current = null;
+    }
+  }, []);
+
+  const animateViewBoxBetween = useCallback(
+    (from: ViewBoxRect, to: ViewBoxRect, durationMs: number, onDone?: () => void) => {
+      const start = performance.now();
+
+      const step = (now: number) => {
+        const t = easeInOutCubic((now - start) / durationMs);
+        setViewBox(lerpViewBox(from, to, t));
+        if (t < 1) {
+          focusFrameAnimationRef.current = requestAnimationFrame(step);
+        } else {
+          setViewBox(to);
+          focusFrameAnimationRef.current = null;
+          onDone?.();
+        }
+      };
+
+      focusFrameAnimationRef.current = requestAnimationFrame(step);
+    },
+    [],
+  );
+
+  const runFocusFramePlan = useCallback(
+    (plan: FocusFramePlan) => {
+      cancelFocusFrameAnimation();
+
+      if (plan.mode === "direct") {
+        animateViewBoxBetween(plan.prior, plan.target, FOCUS_FRAME_DIRECT_MS);
+        return;
+      }
+
+      animateViewBoxBetween(plan.prior, plan.overview, FOCUS_REVEAL_OUT_MS, () => {
+        focusRevealHoldTimerRef.current = setTimeout(() => {
+          focusRevealHoldTimerRef.current = null;
+          animateViewBoxBetween(plan.overview, plan.settle, FOCUS_REVEAL_IN_MS);
+        }, FOCUS_REVEAL_HOLD_MS);
+      });
+    },
+    [animateViewBoxBetween, cancelFocusFrameAnimation],
+  );
+
+  useEffect(
+    () => () => {
+      cancelFocusFrameAnimation();
+    },
+    [cancelFocusFrameAnimation],
   );
 
   useEffect(() => {
@@ -143,17 +204,29 @@ export function GraphViewport({
     if (!host || host.clientWidth <= 0 || host.clientHeight <= 0) return;
 
     const aspect = host.clientWidth / host.clientHeight;
-    const proposed = viewBoxForGraphFocus(
+    const prior = { ...viewBoxRef.current };
+    const plan = resolveFocusFramePlan(
       displayLayout,
       focusVisual,
       aspect,
       focusedModuleId,
+      prior,
+      baseViewBox,
     );
-    if (!proposed) return;
+    if (!plan) return;
 
-    setViewBox(clampZoom(proposed));
+    const clampedPlan: FocusFramePlan =
+      plan.mode === "direct"
+        ? { ...plan, target: clampZoom(plan.target) }
+        : {
+            ...plan,
+            overview: clampZoom(plan.overview),
+            settle: clampZoom(plan.settle),
+          };
+
+    runFocusFramePlan(clampedPlan);
     lastFramedFocusRef.current = frameKey;
-  }, [clampZoom, displayLayout, focusVisual, focusedModuleId]);
+  }, [baseViewBox, clampZoom, displayLayout, focusVisual, focusedModuleId, runFocusFramePlan]);
 
   const onWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -162,7 +235,7 @@ export function GraphViewport({
       if (!bounds) return;
 
       setViewBox((current) => {
-        const factor = event.deltaY < 0 ? 1 / WHEEL_ZOOM_FACTOR : WHEEL_ZOOM_FACTOR;
+        const factor = wheelZoomScaleFactor(event.deltaY, event.deltaMode);
         const focus = screenToViewPoint(current, event.clientX, event.clientY, bounds);
         return clampZoom(zoomViewBoxAt(current, factor, focus.x, focus.y));
       });
@@ -321,7 +394,9 @@ export function GraphViewport({
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => zoomBy(1 / WHEEL_ZOOM_FACTOR)}
+          onClick={() =>
+            zoomBy(wheelZoomScaleFactor(-TOOLBAR_WHEEL_DELTA_PX, 0))
+          }
           aria-label="Zoom in"
         >
           +
@@ -329,7 +404,9 @@ export function GraphViewport({
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => zoomBy(WHEEL_ZOOM_FACTOR)}
+          onClick={() =>
+            zoomBy(wheelZoomScaleFactor(TOOLBAR_WHEEL_DELTA_PX, 0))
+          }
           aria-label="Zoom out"
         >
           −

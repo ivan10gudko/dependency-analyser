@@ -16,7 +16,61 @@ export function collectHighlightedModuleIds(
   return ids;
 }
 
-// Padding around fit region; fewer neighbors → slightly more margin around the node.
+export const FOCUS_REVEAL_MIN_PULLBACK_RATIO = 1.4;
+export const FOCUS_HIGHLIGHT_GRAPH_WIDTH_RATIO = 0.28;
+
+export function shouldPlayFocusRevealAnimation(
+  overview: ViewBoxRect,
+  priorViewBox: ViewBoxRect,
+  baseViewBox: ViewBoxRect,
+): boolean {
+  const pullback = overview.width / Math.max(priorViewBox.width, 1);
+  if (pullback >= FOCUS_REVEAL_MIN_PULLBACK_RATIO) return true;
+  if (
+    pullback > 1.08 &&
+    overview.width >= baseViewBox.width * FOCUS_HIGHLIGHT_GRAPH_WIDTH_RATIO
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function focusNodeCenterInLayout(
+  layout: LayoutRenderModel,
+  nodeId: string,
+): { x: number; y: number } | null {
+  const node = layout.nodes.find((n) => !n.isDummy && n.id === nodeId);
+  if (!node || node.x === undefined || node.y === undefined) return null;
+  return { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+}
+
+export function viewBoxWithSameScaleCenteredOn(
+  prior: ViewBoxRect,
+  center: { x: number; y: number },
+): ViewBoxRect {
+  return {
+    x: center.x - prior.width / 2,
+    y: center.y - prior.height / 2,
+    width: prior.width,
+    height: prior.height,
+  };
+}
+
+export type FocusFramePlan =
+  | { mode: "direct"; prior: ViewBoxRect; target: ViewBoxRect }
+  | {
+      mode: "reveal";
+      prior: ViewBoxRect;
+      overview: ViewBoxRect;
+      settle: ViewBoxRect;
+    };
+
+function paddingRatioForHighlightCount(count: number): number {
+  if (count <= 3) return 0.12;
+  if (count <= 10) return 0.16;
+  return 0.2;
+}
+
 export function focusFitPaddingForCount(highlightCount: number): number {
   if (highlightCount <= 1) return 56;
   if (highlightCount <= 3) return 44;
@@ -36,7 +90,6 @@ export function contentBoundsForHighlight(
   return parseViewBox(computeLayoutBounds(nodes, padding).viewBox);
 }
 
-// Picks a viewBox that fits `content` in the viewport
 export function viewBoxToFitContent(
   content: ViewBoxRect,
   viewportAspect: number,
@@ -90,6 +143,36 @@ export function viewBoxForGraphFocus(
   }
   if (!content) return null;
 
-  const paddingRatio = count <= 3 ? 0.12 : count <= 10 ? 0.16 : 0.2;
-  return viewBoxToFitContent(content, viewportAspect, paddingRatio);
+  return viewBoxToFitContent(
+    content,
+    viewportAspect,
+    paddingRatioForHighlightCount(count),
+  );
+}
+
+export function resolveFocusFramePlan(
+  layout: LayoutRenderModel,
+  focusVisual: GraphFocusVisual | null,
+  viewportAspect: number,
+  focusNodeId: string,
+  priorViewBox: ViewBoxRect,
+  baseViewBox: ViewBoxRect,
+): FocusFramePlan | null {
+  const overview = viewBoxForGraphFocus(layout, focusVisual, viewportAspect, focusNodeId);
+  if (!overview) return null;
+
+  const highlightedIds = collectHighlightedModuleIds(focusVisual);
+  const center = focusNodeCenterInLayout(layout, focusNodeId);
+  const settle = center
+    ? viewBoxWithSameScaleCenteredOn(priorViewBox, center)
+    : { ...priorViewBox };
+
+  if (
+    highlightedIds.size > 1 &&
+    shouldPlayFocusRevealAnimation(overview, priorViewBox, baseViewBox)
+  ) {
+    return { mode: "reveal", prior: priorViewBox, overview, settle };
+  }
+
+  return { mode: "direct", prior: priorViewBox, target: overview };
 }
