@@ -12,6 +12,7 @@ import {
 import { reduceCrossings } from "./crossing-reduction";
 import { createDummyNodes } from "./insert-dummy-nodes";
 import { buildInitialLayerOrder, type LayerOrder } from "./layer-order";
+import { prepareGraphForLayout } from "./prepare-layout-graph";
 import { breakCycles } from "./remove-cycles";
 import type { LayoutGraph } from "./types";
 
@@ -79,8 +80,9 @@ export function buildHierarchicalLayout(
   graph: ModuleDependencyGraph,
   options?: BuildHierarchicalLayoutOptions,
 ): HierarchicalLayoutResult {
-  const root = options?.root ?? pickLayoutRoot(graph);
-  const acyclic = breakCycles(graph, root);
+  const graphForLayout = prepareGraphForLayout(graph);
+  const root = options?.root ?? pickLayoutRoot(graphForLayout);
+  const acyclic = breakCycles(graphForLayout, root);
   const layers = assignLayers(acyclic);
   const layoutGraph = createDummyNodes(acyclic, layers);
   const layerOrder = buildInitialLayerOrder(layoutGraph);

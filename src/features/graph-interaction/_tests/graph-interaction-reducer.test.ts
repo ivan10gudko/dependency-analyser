@@ -25,6 +25,7 @@ const baseState = (): GraphInteractionState => ({
   locationColoringEnabled: false,
   locationAutoPresetsEnabled: true,
   locationColorRules: [],
+  disabledLocationPresetIds: [],
 });
 
 describe("parseConnectivityDepth", () => {
@@ -263,5 +264,46 @@ describe("graphInteractionReducer location colors", () => {
       projectKey: "/repo",
     });
     expect(reopened.locationColorRules).toEqual([{ mask: "src/legacy/**", colorId: "rose" }]);
+  });
+
+  it("stores disabled presets per project", () => {
+    const opened = graphInteractionReducer(baseState(), {
+      type: "RESET",
+      projectKey: "/repo",
+    });
+    const disabled = graphInteractionReducer(opened, {
+      type: "SET_LOCATION_PRESET_ENABLED",
+      presetId: "features",
+      enabled: false,
+    });
+    expect(disabled.disabledLocationPresetIds).toEqual(["features"]);
+
+    const reenabled = graphInteractionReducer(disabled, {
+      type: "SET_LOCATION_PRESET_ENABLED",
+      presetId: "features",
+      enabled: true,
+    });
+    expect(reenabled.disabledLocationPresetIds).toEqual([]);
+
+    const disabledAgain = graphInteractionReducer(reenabled, {
+      type: "SET_LOCATION_PRESET_ENABLED",
+      presetId: "shared",
+      enabled: false,
+    });
+    expect(
+      localStorage.getItem("dependency-analyser.graph.disabledLocationPresets./repo"),
+    ).toBe(JSON.stringify(["shared"]));
+
+    const reopened = graphInteractionReducer(disabledAgain, {
+      type: "RESET",
+      projectKey: "/other",
+    });
+    expect(reopened.disabledLocationPresetIds).toEqual([]);
+
+    const backToRepo = graphInteractionReducer(reopened, {
+      type: "RESET",
+      projectKey: "/repo",
+    });
+    expect(backToRepo.disabledLocationPresetIds).toEqual(["shared"]);
   });
 });

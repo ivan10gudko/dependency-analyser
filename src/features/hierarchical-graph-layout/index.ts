@@ -35,6 +35,7 @@ export {
   type LayoutRenderNode,
 } from "./layout-render-model";
 export { buildInitialLayerOrder, maxLayerIndex, type LayerOrder } from "./layer-order";
+export { prepareGraphForLayout } from "./prepare-layout-graph";
 export { createDummyNodes } from "./insert-dummy-nodes";
 export { breakCycles } from "./remove-cycles";
 export { collectReachableFromRoot, subgraphOf } from "./subgraph";

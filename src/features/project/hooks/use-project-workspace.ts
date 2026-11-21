@@ -1,7 +1,12 @@
 import { useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-import { collectCycleBreaks, type CycleBreak } from "../../architecture-problems";
+import {
+  collectCycleBreaks,
+  collectSelfDependencies,
+  type CycleBreak,
+  type SelfDependency,
+} from "../../architecture-problems";
 import { ConfigurationAnalyser } from "../../configuration-analyser";
 import { buildModuleDependencyGraphFromAnalysis } from "../../graph-data";
 import {
@@ -39,6 +44,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
   const [layoutModel, setLayoutModel] = useState<LayoutRenderModel | null>(null);
   const [layoutScope, setLayoutScope] = useState<LayoutScopeSummary | null>(null);
   const [cycleBreaks, setCycleBreaks] = useState<CycleBreak[]>([]);
+  const [selfDependencies, setSelfDependencies] = useState<SelfDependency[]>([]);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [error, setError] = useState<InvokeError | null>(null);
   const [loading, setLoading] = useState<LoadingState>("idle");
@@ -52,6 +58,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
     setLayoutModel(null);
     setLayoutScope(null);
     setCycleBreaks([]);
+    setSelfDependencies([]);
     setLayoutError(null);
     setError(null);
   }, []);
@@ -68,6 +75,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
     setLayoutModel(null);
     setLayoutScope(null);
     setCycleBreaks([]);
+    setSelfDependencies([]);
     setLayoutError(null);
     setProjectRootAbsolute(null);
     setFileModuleIds([]);
@@ -104,6 +112,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
 
       const graph = buildModuleDependencyGraphFromAnalysis(projectAnalysis);
       setDependencyGraph(graph);
+      setSelfDependencies(collectSelfDependencies(graph));
 
       try {
         const layout = buildHierarchicalLayout(graph);
@@ -135,6 +144,7 @@ export function useProjectWorkspace(): ProjectWorkspace {
     layoutModel,
     layoutScope,
     cycleBreaks,
+    selfDependencies,
     layoutError,
     error,
     loading,

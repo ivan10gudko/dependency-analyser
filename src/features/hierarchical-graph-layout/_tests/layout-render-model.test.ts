@@ -55,6 +55,18 @@ describe("buildHierarchicalLayout", () => {
     }
   });
 
+  it("builds layout when a module has a self-edge", () => {
+    const graph = graphOf([
+      ["ui/index.ts", "ui/index.ts"],
+      ["app/page.tsx", "ui/index.ts"],
+    ]);
+
+    const { model, scope } = buildHierarchicalLayout(graph, { root: "app/page.tsx" });
+
+    expect(scope.totalModules).toBe(2);
+    expect(model.nodes.filter((node) => !node.isDummy)).toHaveLength(2);
+  });
+
   it("does not place module nodes on the same layer with horizontal overlap", () => {
     const leaves = ["L1", "L2", "L3", "L4", "L5", "L6"] as const;
     const edges: [NodeId, NodeId][] = [["root", "hub"]];

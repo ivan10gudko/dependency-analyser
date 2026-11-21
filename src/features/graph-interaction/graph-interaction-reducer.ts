@@ -2,6 +2,7 @@ import { readStringEnum, writeStringSetting } from "../../lib/persisted-setting"
 import { mergeMasks, normalizeMasks } from "../graph-filters";
 import {
   isLocationColorId,
+  LOCATION_COLOR_PRESETS,
   normalizeLocationColorRules,
   removeLocationColorRuleByMask,
   upsertLocationColorRule,
@@ -29,6 +30,8 @@ const FILTERS_KEY_PREFIX = "dependency-analyser.graph.filters.";
 const LOCATION_COLORING_KEY = "dependency-analyser.graph.locationColoringEnabled";
 const LOCATION_AUTO_PRESETS_KEY = "dependency-analyser.graph.locationAutoPresetsEnabled";
 const LOCATION_RULES_KEY_PREFIX = "dependency-analyser.graph.locationColors.";
+const DISABLED_LOCATION_PRESETS_KEY_PREFIX =
+  "dependency-analyser.graph.disabledLocationPresets.";
 
 export interface GraphInteractionState {
   focusedModuleId: ModuleId | null;
@@ -44,6 +47,7 @@ export interface GraphInteractionState {
   locationColoringEnabled: boolean;
   locationAutoPresetsEnabled: boolean;
   locationColorRules: LocationColorRule[];
+  disabledLocationPresetIds: string[];
 }
 
 export type GraphInteractionAction =
@@ -65,6 +69,7 @@ export type GraphInteractionAction =
   | { type: "ADD_LOCATION_COLOR_RULE"; rule: LocationColorRule }
   | { type: "SET_LOCATION_COLOR_RULE"; rule: LocationColorRule }
   | { type: "REMOVE_LOCATION_COLOR_RULE"; mask: string }
+  | { type: "SET_LOCATION_PRESET_ENABLED"; presetId: string; enabled: boolean }
   | { type: "RESET"; projectKey?: string | null };
 
 export function parseConnectivityDepth(raw: string | null): ConnectivityDepth {
@@ -177,6 +182,60 @@ function persistLocationColorRules(
 
 function locationRulesStorageKey(projectKey: string): string {
   return `${LOCATION_RULES_KEY_PREFIX}${projectKey}`;
+}
+
+const KNOWN_LOCATION_PRESET_IDS = new Set(
+  LOCATION_COLOR_PRESETS.map((preset) => preset.id),
+);
+
+export function loadStoredDisabledLocationPresetIds(projectKey: string | null): string[] {
+  if (!projectKey) return [];
+  try {
+    const raw = localStorage.getItem(disabledPresetsStorageKey(projectKey));
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const ids: string[] = [];
+    for (const item of parsed) {
+      if (typeof item !== "string") continue;
+      if (!KNOWN_LOCATION_PRESET_IDS.has(item)) continue;
+      if (ids.includes(item)) continue;
+      ids.push(item);
+    }
+    return ids;
+  } catch {
+    return [];
+  }
+}
+
+function persistDisabledLocationPresetIds(
+  projectKey: string | null,
+  presetIds: readonly string[],
+): void {
+  if (!projectKey) return;
+  writeStringSetting(
+    disabledPresetsStorageKey(projectKey),
+    JSON.stringify(presetIds),
+  );
+}
+
+function disabledPresetsStorageKey(projectKey: string): string {
+  return `${DISABLED_LOCATION_PRESETS_KEY_PREFIX}${projectKey}`;
+}
+
+function setLocationPresetEnabled(
+  current: readonly string[],
+  presetId: string,
+  enabled: boolean,
+): string[] {
+  if (!KNOWN_LOCATION_PRESET_IDS.has(presetId)) return [...current];
+  const has = current.includes(presetId);
+  if (enabled) {
+    if (!has) return [...current];
+    return current.filter((id) => id !== presetId);
+  }
+  if (has) return [...current];
+  return [...current, presetId];
 }
 
 export function loadStoredGraphFilters(projectKey: string | null): {
@@ -333,10 +392,23 @@ export function graphInteractionReducer(
       persistLocationColorRules(state.projectKey, locationColorRules);
       return { ...state, locationColorRules };
     }
+    case "SET_LOCATION_PRESET_ENABLED": {
+      const disabledLocationPresetIds = setLocationPresetEnabled(
+        state.disabledLocationPresetIds,
+        action.presetId,
+        action.enabled,
+      );
+      if (sameStringList(state.disabledLocationPresetIds, disabledLocationPresetIds)) {
+        return state;
+      }
+      persistDisabledLocationPresetIds(state.projectKey, disabledLocationPresetIds);
+      return { ...state, disabledLocationPresetIds };
+    }
     case "RESET": {
       const projectKey = action.projectKey ?? null;
       const filters = loadStoredGraphFilters(projectKey);
       const locationColorRules = loadStoredLocationColorRules(projectKey);
+      const disabledLocationPresetIds = loadStoredDisabledLocationPresetIds(projectKey);
       return {
         focusedModuleId: null,
         connectivityDepth: state.connectivityDepth,
@@ -351,11 +423,20 @@ export function graphInteractionReducer(
         locationColoringEnabled: state.locationColoringEnabled,
         locationAutoPresetsEnabled: state.locationAutoPresetsEnabled,
         locationColorRules,
+        disabledLocationPresetIds,
       };
     }
     default:
       return state;
   }
+}
+
+function sameStringList(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+  return true;
 }
 
 export function createInitialGraphInteractionState(): GraphInteractionState {
@@ -373,5 +454,6 @@ export function createInitialGraphInteractionState(): GraphInteractionState {
     locationColoringEnabled: loadStoredLocationColoringEnabled(),
     locationAutoPresetsEnabled: loadStoredLocationAutoPresetsEnabled(),
     locationColorRules: [],
+    disabledLocationPresetIds: [],
   };
 }

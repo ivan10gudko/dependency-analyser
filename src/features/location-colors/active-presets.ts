@@ -14,8 +14,11 @@ export function listPresetActivity(
 
 export function activePresetRules(
   moduleIds: readonly string[],
+  disabledPresetIds: readonly string[] = [],
 ): LocationColorPreset[] {
+  const disabled = new Set(disabledPresetIds);
   return listPresetActivity(moduleIds)
     .filter((entry) => entry.active)
-    .map((entry) => entry.preset);
+    .map((entry) => entry.preset)
+    .filter((preset) => !disabled.has(preset.id));
 }

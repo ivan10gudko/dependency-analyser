@@ -628,6 +628,16 @@
   font-size: 12px;
 }
 
+.wb-location-preset-enable {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.wb-location-preset-enable input {
+  margin: 0;
+}
+
 .wb-location-preset-row.is-inactive {
   opacity: 0.4;
 }

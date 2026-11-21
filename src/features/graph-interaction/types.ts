@@ -58,6 +58,7 @@ export interface GraphInteractionValue {
   locationColoringEnabled: boolean;
   locationAutoPresetsEnabled: boolean;
   locationColorRules: readonly LocationColorRule[];
+  disabledLocationPresetIds: readonly string[];
   locationColorByModuleId: ReadonlyMap<ModuleId, LocationColorId> | null;
   focusVisual: GraphFocusVisual | null;
   displayGraph: ModuleDependencyGraph | null;
@@ -83,4 +84,5 @@ export interface GraphInteractionValue {
   addLocationColorRule: (rule: LocationColorRule) => void;
   setLocationColorRule: (rule: LocationColorRule) => void;
   removeLocationColorRule: (mask: string) => void;
+  setLocationPresetEnabled: (presetId: string, enabled: boolean) => void;
 }

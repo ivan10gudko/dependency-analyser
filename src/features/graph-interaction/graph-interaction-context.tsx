@@ -186,6 +186,7 @@ export function GraphInteractionProvider({
       state.locationColorRules,
       state.locationAutoPresetsEnabled,
       moduleIds,
+      state.disabledLocationPresetIds,
     );
     if (rules.length === 0) return null;
     return buildLocationColorMap([...layoutDisplayGraph.nodes.keys()], rules);
@@ -193,6 +194,7 @@ export function GraphInteractionProvider({
     state.locationColoringEnabled,
     state.locationAutoPresetsEnabled,
     state.locationColorRules,
+    state.disabledLocationPresetIds,
     layoutDisplayGraph,
     moduleIds,
   ]);
@@ -291,6 +293,12 @@ export function GraphInteractionProvider({
     [],
   );
 
+  const setLocationPresetEnabled = useCallback(
+    (presetId: string, enabled: boolean) =>
+      dispatch({ type: "SET_LOCATION_PRESET_ENABLED", presetId, enabled }),
+    [],
+  );
+
   const value = useMemo<GraphInteractionValue>(
     () => ({
       focusedModuleId: state.focusedModuleId,
@@ -307,6 +315,7 @@ export function GraphInteractionProvider({
       locationColoringEnabled: state.locationColoringEnabled,
       locationAutoPresetsEnabled: state.locationAutoPresetsEnabled,
       locationColorRules: state.locationColorRules,
+      disabledLocationPresetIds: state.disabledLocationPresetIds,
       locationColorByModuleId,
       focusVisual,
       displayGraph,
@@ -332,6 +341,7 @@ export function GraphInteractionProvider({
       addLocationColorRule,
       setLocationColorRule,
       removeLocationColorRule,
+      setLocationPresetEnabled,
     }),
     [
       state.focusedModuleId,
@@ -347,6 +357,7 @@ export function GraphInteractionProvider({
       state.locationColoringEnabled,
       state.locationAutoPresetsEnabled,
       state.locationColorRules,
+      state.disabledLocationPresetIds,
       moduleIds,
       locationColorByModuleId,
       focusVisual,
@@ -373,6 +384,7 @@ export function GraphInteractionProvider({
       addLocationColorRule,
       setLocationColorRule,
       removeLocationColorRule,
+      setLocationPresetEnabled,
     ],
   );
 

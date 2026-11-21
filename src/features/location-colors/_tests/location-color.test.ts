@@ -42,6 +42,12 @@ describe("buildEffectiveLocationRules", () => {
     const effective = buildEffectiveLocationRules([], true, moduleIds);
     expect(resolveColorId("src/app/main.ts", effective)).toBe("blue");
   });
+
+  it("skips disabled presets", () => {
+    const effective = buildEffectiveLocationRules([], true, moduleIds, ["app"]);
+    expect(resolveColorId("src/app/main.ts", effective)).toBeNull();
+    expect(resolveColorId("src/features/a.ts", effective)).toBe("green");
+  });
 });
 
 describe("buildLocationColorMap", () => {

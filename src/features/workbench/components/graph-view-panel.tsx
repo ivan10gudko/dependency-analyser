@@ -46,12 +46,19 @@ export function GraphViewPanel() {
     locationColoringEnabled,
     locationAutoPresetsEnabled,
     locationColorRules,
+    disabledLocationPresetIds,
     setLocationColoringEnabled,
     setLocationAutoPresetsEnabled,
     addLocationColorRule,
     setLocationColorRule,
     removeLocationColorRule,
+    setLocationPresetEnabled,
   } = useGraphInteraction();
+
+  const disabledPresetSet = useMemo(
+    () => new Set(disabledLocationPresetIds),
+    [disabledLocationPresetIds],
+  );
 
   function setPresetColor(presetMask: string, defaultColorId: LocationColorId, next: LocationColorId) {
     if (next === defaultColorId) {
@@ -212,7 +219,8 @@ export function GraphViewPanel() {
               <>
                 Applies FSD-style defaults (<span className="wb-mask-code">features</span>,{" "}
                 <span className="wb-mask-code">shared</span>, etc.) when matching files exist in the
-                project. Click a color square to change it for this project.
+                project. Uncheck a folder to skip its color; click a square to override the
+                default for this project.
               </>
             }
           />
@@ -221,16 +229,28 @@ export function GraphViewPanel() {
       {locationColoringEnabled && locationAutoPresetsEnabled && (
         <ul className="wb-location-preset-list">
           {presetActivity.map(({ preset, active }) => {
+            const enabled = active && !disabledPresetSet.has(preset.id);
             const override = manualColorForMask(locationColorRules, preset.mask);
             const effectiveColor = override ?? preset.colorId;
             return (
               <li
                 key={preset.id}
-                className={`wb-location-preset-row${active ? "" : " is-inactive"}`}
+                className={`wb-location-preset-row${enabled ? "" : " is-inactive"}`}
               >
+                <label className="wb-location-preset-enable">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    disabled={!active}
+                    aria-label={`Use color for ${preset.label}`}
+                    onChange={(event) =>
+                      setLocationPresetEnabled(preset.id, event.target.checked)
+                    }
+                  />
+                </label>
                 <ZoneColorPicker
                   colorId={effectiveColor}
-                  disabled={!active}
+                  disabled={!enabled}
                   ariaLabel={`Color for ${preset.label}`}
                   onChange={(next) => setPresetColor(preset.mask, preset.colorId, next)}
                 />
