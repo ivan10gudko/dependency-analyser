@@ -22,6 +22,9 @@ const baseState = (): GraphInteractionState => ({
   projectKey: null,
   folderMasks: [],
   fileMasks: [],
+  locationColoringEnabled: false,
+  locationAutoPresetsEnabled: true,
+  locationColorRules: [],
 });
 
 describe("parseConnectivityDepth", () => {
@@ -206,5 +209,59 @@ describe("graphInteractionReducer filters", () => {
     expect(hidden.showTestFiles).toBe(false);
     const reset = graphInteractionReducer(hidden, { type: "RESET", projectKey: "/repo" });
     expect(reset.showTestFiles).toBe(false);
+  });
+});
+
+describe("graphInteractionReducer location colors", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    });
+  });
+
+  it("persists global toggles", () => {
+    const enabled = graphInteractionReducer(baseState(), {
+      type: "SET_LOCATION_COLORING",
+      enabled: true,
+    });
+    expect(enabled.locationColoringEnabled).toBe(true);
+    expect(localStorage.getItem("dependency-analyser.graph.locationColoringEnabled")).toBe("true");
+
+    const autoOff = graphInteractionReducer(enabled, {
+      type: "SET_LOCATION_AUTO_PRESETS",
+      enabled: false,
+    });
+    expect(autoOff.locationAutoPresetsEnabled).toBe(false);
+    expect(localStorage.getItem("dependency-analyser.graph.locationAutoPresetsEnabled")).toBe(
+      "false",
+    );
+  });
+
+  it("stores rules per project and reloads on reset", () => {
+    const opened = graphInteractionReducer(baseState(), {
+      type: "RESET",
+      projectKey: "/repo",
+    });
+    const withRule = graphInteractionReducer(opened, {
+      type: "ADD_LOCATION_COLOR_RULE",
+      rule: { mask: "src/legacy/**", colorId: "rose" },
+    });
+    expect(withRule.locationColorRules).toEqual([{ mask: "src/legacy/**", colorId: "rose" }]);
+
+    const other = graphInteractionReducer(withRule, {
+      type: "RESET",
+      projectKey: "/other",
+    });
+    expect(other.locationColorRules).toEqual([]);
+
+    const reopened = graphInteractionReducer(other, {
+      type: "RESET",
+      projectKey: "/repo",
+    });
+    expect(reopened.locationColorRules).toEqual([{ mask: "src/legacy/**", colorId: "rose" }]);
   });
 });

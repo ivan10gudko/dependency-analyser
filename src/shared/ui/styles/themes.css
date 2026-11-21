@@ -27,6 +27,26 @@
   --color-graph-node-focus-stroke: var(--color-accent);
   --color-graph-node-related-fill: #f3f9ff;
   --color-graph-edge-highlight: var(--color-accent);
+  --graph-zone-green-stroke: #16a34a;
+  --graph-zone-green-fill: color-mix(in srgb, #16a34a 18%, var(--color-graph-node-fill));
+  --graph-zone-blue-stroke: #2563eb;
+  --graph-zone-blue-fill: color-mix(in srgb, #2563eb 18%, var(--color-graph-node-fill));
+  --graph-zone-purple-stroke: #9333ea;
+  --graph-zone-purple-fill: color-mix(in srgb, #9333ea 18%, var(--color-graph-node-fill));
+  --graph-zone-amber-stroke: #d97706;
+  --graph-zone-amber-fill: color-mix(in srgb, #d97706 20%, var(--color-graph-node-fill));
+  --graph-zone-rose-stroke: #e11d48;
+  --graph-zone-rose-fill: color-mix(in srgb, #e11d48 16%, var(--color-graph-node-fill));
+  --graph-zone-teal-stroke: #0d9488;
+  --graph-zone-teal-fill: color-mix(in srgb, #0d9488 18%, var(--color-graph-node-fill));
+  --graph-zone-indigo-stroke: #4f46e5;
+  --graph-zone-indigo-fill: color-mix(in srgb, #4f46e5 18%, var(--color-graph-node-fill));
+  --graph-zone-slate-stroke: #64748b;
+  --graph-zone-slate-fill: color-mix(in srgb, #64748b 20%, var(--color-graph-node-fill));
+  --graph-zone-orange-stroke: #ea580c;
+  --graph-zone-orange-fill: color-mix(in srgb, #ea580c 18%, var(--color-graph-node-fill));
+  --graph-zone-cyan-stroke: #0891b2;
+  --graph-zone-cyan-fill: color-mix(in srgb, #0891b2 18%, var(--color-graph-node-fill));
   --color-tree-icon: #14c9e1;
   --size-menubar: 35px;
   --font-ui: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -62,6 +82,26 @@
   --color-graph-node-focus-stroke: var(--color-accent);
   --color-graph-node-related-fill: #2d3542;
   --color-graph-edge-highlight: var(--color-accent);
+  --graph-zone-green-stroke: #4ade80;
+  --graph-zone-green-fill: color-mix(in srgb, #22c55e 22%, var(--color-graph-node-fill));
+  --graph-zone-blue-stroke: #60a5fa;
+  --graph-zone-blue-fill: color-mix(in srgb, #3b82f6 22%, var(--color-graph-node-fill));
+  --graph-zone-purple-stroke: #c084fc;
+  --graph-zone-purple-fill: color-mix(in srgb, #a855f7 22%, var(--color-graph-node-fill));
+  --graph-zone-amber-stroke: #fbbf24;
+  --graph-zone-amber-fill: color-mix(in srgb, #f59e0b 22%, var(--color-graph-node-fill));
+  --graph-zone-rose-stroke: #fb7185;
+  --graph-zone-rose-fill: color-mix(in srgb, #f43f5e 20%, var(--color-graph-node-fill));
+  --graph-zone-teal-stroke: #2dd4bf;
+  --graph-zone-teal-fill: color-mix(in srgb, #14b8a6 22%, var(--color-graph-node-fill));
+  --graph-zone-indigo-stroke: #818cf8;
+  --graph-zone-indigo-fill: color-mix(in srgb, #6366f1 22%, var(--color-graph-node-fill));
+  --graph-zone-slate-stroke: #94a3b8;
+  --graph-zone-slate-fill: color-mix(in srgb, #64748b 24%, var(--color-graph-node-fill));
+  --graph-zone-orange-stroke: #fb923c;
+  --graph-zone-orange-fill: color-mix(in srgb, #f97316 22%, var(--color-graph-node-fill));
+  --graph-zone-cyan-stroke: #22d3ee;
+  --graph-zone-cyan-fill: color-mix(in srgb, #06b6d4 22%, var(--color-graph-node-fill));
 }
 
 html,

@@ -455,13 +455,36 @@
   line-height: 1.45;
 }
 
+.wb-view-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+}
+
+.wb-view-section-heading:first-child {
+  margin-top: 0;
+}
+
 .wb-view-section {
-  margin: 0.25rem 0 0;
+  margin: 0;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-fg-muted);
+}
+
+.wb-view-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.wb-field-label-with-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .wb-view-toggle {
@@ -477,4 +500,151 @@
 .wb-view-toggle input {
   margin: 0;
   accent-color: var(--color-accent);
+}
+
+.wb-zone-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.wb-zone-swatch {
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wb-zone-swatch.is-static {
+  cursor: default;
+}
+
+.wb-zone-color-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.wb-zone-color-picker .wb-zone-swatch {
+  display: block;
+}
+
+.wb-zone-color-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.4rem;
+  min-width: 8.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.wb-zone-swatch.is-selected {
+  box-shadow: 0 0 0 1px var(--color-surface), 0 0 0 2px var(--color-accent);
+}
+
+.wb-zone-swatch--green {
+  background: var(--graph-zone-green-stroke);
+}
+.wb-zone-swatch--blue {
+  background: var(--graph-zone-blue-stroke);
+}
+.wb-zone-swatch--purple {
+  background: var(--graph-zone-purple-stroke);
+}
+.wb-zone-swatch--amber {
+  background: var(--graph-zone-amber-stroke);
+}
+.wb-zone-swatch--rose {
+  background: var(--graph-zone-rose-stroke);
+}
+.wb-zone-swatch--teal {
+  background: var(--graph-zone-teal-stroke);
+}
+.wb-zone-swatch--indigo {
+  background: var(--graph-zone-indigo-stroke);
+}
+.wb-zone-swatch--slate {
+  background: var(--graph-zone-slate-stroke);
+}
+.wb-zone-swatch--orange {
+  background: var(--graph-zone-orange-stroke);
+}
+.wb-zone-swatch--cyan {
+  background: var(--graph-zone-cyan-stroke);
+}
+
+.wb-location-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wb-location-rule-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wb-location-rule-add {
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  cursor: pointer;
+}
+
+.wb-location-rule-add:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wb-location-rule-list,
+.wb-location-preset-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wb-location-rule-row,
+.wb-location-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 12px;
+}
+
+.wb-location-preset-row.is-inactive {
+  opacity: 0.4;
+}
+
+.wb-location-rule-mask,
+.wb-location-preset-mask {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-muted);
+}
+
+.wb-location-preset-label {
+  min-width: 4.5rem;
+  font-weight: 500;
 }

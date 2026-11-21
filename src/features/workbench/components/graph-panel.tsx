@@ -32,6 +32,7 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
     layoutDisplayGraph,
     toggleBarrelExpand,
     expandedBarrelDirectories,
+    locationColorByModuleId,
   } = useGraphInteraction();
 
   const filtersHidEverything =
@@ -124,6 +125,7 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
           onFocusBarrel={focusBarrelNode}
           onToggleBarrelExpand={toggleBarrelExpand}
           expandedBarrelDirectories={expandedBarrelDirectories}
+          locationColorByModuleId={locationColorByModuleId}
         />
       )}
 

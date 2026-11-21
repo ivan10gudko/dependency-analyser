@@ -1,4 +1,5 @@
 import type { ModuleDependencyGraph } from "../graph-data/types";
+import type { LocationColorId, LocationColorRule } from "../location-colors";
 import type { ModuleId } from "../project/types";
 import type { ModuleFileStats } from "../project/module-file-stats";
 
@@ -54,6 +55,10 @@ export interface GraphInteractionValue {
   folderMasks: readonly string[];
   fileMasks: readonly string[];
   moduleIds: readonly string[];
+  locationColoringEnabled: boolean;
+  locationAutoPresetsEnabled: boolean;
+  locationColorRules: readonly LocationColorRule[];
+  locationColorByModuleId: ReadonlyMap<ModuleId, LocationColorId> | null;
   focusVisual: GraphFocusVisual | null;
   displayGraph: ModuleDependencyGraph | null;
   layoutDisplayGraph: ModuleDependencyGraph | null;
@@ -73,4 +78,9 @@ export interface GraphInteractionValue {
   removeFolderMask: (mask: string) => void;
   addFileMasks: (masks: readonly string[]) => void;
   removeFileMask: (mask: string) => void;
+  setLocationColoringEnabled: (enabled: boolean) => void;
+  setLocationAutoPresetsEnabled: (enabled: boolean) => void;
+  addLocationColorRule: (rule: LocationColorRule) => void;
+  setLocationColorRule: (rule: LocationColorRule) => void;
+  removeLocationColorRule: (mask: string) => void;
 }

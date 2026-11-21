@@ -1,13 +1,21 @@
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
 import { cx } from "./utils";
 
 export interface RangeInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label?: string;
   valueLabel?: string;
+  hint?: ReactNode;
 }
 
-export function RangeInput({ className, label, valueLabel, id, ...props }: RangeInputProps) {
+export function RangeInput({
+  className,
+  label,
+  valueLabel,
+  hint,
+  id,
+  ...props
+}: RangeInputProps) {
   const inputId = id ?? (label ? `range-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined);
 
   return (
@@ -15,9 +23,12 @@ export function RangeInput({ className, label, valueLabel, id, ...props }: Range
       {(label || valueLabel) && (
         <div className="ui-range-header">
           {label ? (
-            <label className="ui-range-label" htmlFor={inputId}>
-              {label}
-            </label>
+            <div className="ui-field-label-row">
+              <label className="ui-range-label" htmlFor={inputId}>
+                {label}
+              </label>
+              {hint}
+            </div>
           ) : (
             <span />
           )}

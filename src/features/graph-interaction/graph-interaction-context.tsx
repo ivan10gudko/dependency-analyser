@@ -17,6 +17,11 @@ import {
   barrelFolderFromNodeId,
 } from "../barrel-view";
 import { excludeModules } from "../graph-filters";
+import {
+  buildEffectiveLocationRules,
+  buildLocationColorMap,
+  type LocationColorRule,
+} from "../location-colors";
 import type { ModuleDependencyGraph } from "../graph-data/types";
 import type { ModuleFileStats } from "../project/module-file-stats";
 import { directoryOf } from "../../lib/path";
@@ -175,6 +180,23 @@ export function GraphInteractionProvider({
     [dependencyGraph],
   );
 
+  const locationColorByModuleId = useMemo(() => {
+    if (!state.locationColoringEnabled || !layoutDisplayGraph) return null;
+    const rules = buildEffectiveLocationRules(
+      state.locationColorRules,
+      state.locationAutoPresetsEnabled,
+      moduleIds,
+    );
+    if (rules.length === 0) return null;
+    return buildLocationColorMap([...layoutDisplayGraph.nodes.keys()], rules);
+  }, [
+    state.locationColoringEnabled,
+    state.locationAutoPresetsEnabled,
+    state.locationColorRules,
+    layoutDisplayGraph,
+    moduleIds,
+  ]);
+
   const focusModule = useCallback(
     (id: ModuleId) => {
       if (filteredGraph && state.barrelViewEnabled) {
@@ -244,6 +266,31 @@ export function GraphInteractionProvider({
     [],
   );
 
+  const setLocationColoringEnabled = useCallback(
+    (enabled: boolean) => dispatch({ type: "SET_LOCATION_COLORING", enabled }),
+    [],
+  );
+
+  const setLocationAutoPresetsEnabled = useCallback(
+    (enabled: boolean) => dispatch({ type: "SET_LOCATION_AUTO_PRESETS", enabled }),
+    [],
+  );
+
+  const addLocationColorRule = useCallback(
+    (rule: LocationColorRule) => dispatch({ type: "ADD_LOCATION_COLOR_RULE", rule }),
+    [],
+  );
+
+  const setLocationColorRule = useCallback(
+    (rule: LocationColorRule) => dispatch({ type: "SET_LOCATION_COLOR_RULE", rule }),
+    [],
+  );
+
+  const removeLocationColorRule = useCallback(
+    (mask: string) => dispatch({ type: "REMOVE_LOCATION_COLOR_RULE", mask }),
+    [],
+  );
+
   const value = useMemo<GraphInteractionValue>(
     () => ({
       focusedModuleId: state.focusedModuleId,
@@ -257,6 +304,10 @@ export function GraphInteractionProvider({
       folderMasks: state.folderMasks,
       fileMasks: state.fileMasks,
       moduleIds,
+      locationColoringEnabled: state.locationColoringEnabled,
+      locationAutoPresetsEnabled: state.locationAutoPresetsEnabled,
+      locationColorRules: state.locationColorRules,
+      locationColorByModuleId,
       focusVisual,
       displayGraph,
       layoutDisplayGraph,
@@ -276,6 +327,11 @@ export function GraphInteractionProvider({
       removeFolderMask,
       addFileMasks,
       removeFileMask,
+      setLocationColoringEnabled,
+      setLocationAutoPresetsEnabled,
+      addLocationColorRule,
+      setLocationColorRule,
+      removeLocationColorRule,
     }),
     [
       state.focusedModuleId,
@@ -288,7 +344,11 @@ export function GraphInteractionProvider({
       state.showTestFiles,
       state.folderMasks,
       state.fileMasks,
+      state.locationColoringEnabled,
+      state.locationAutoPresetsEnabled,
+      state.locationColorRules,
       moduleIds,
+      locationColorByModuleId,
       focusVisual,
       displayGraph,
       layoutDisplayGraph,
@@ -308,6 +368,11 @@ export function GraphInteractionProvider({
       removeFolderMask,
       addFileMasks,
       removeFileMask,
+      setLocationColoringEnabled,
+      setLocationAutoPresetsEnabled,
+      addLocationColorRule,
+      setLocationColorRule,
+      removeLocationColorRule,
     ],
   );
 

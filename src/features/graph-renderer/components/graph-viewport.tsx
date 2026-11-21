@@ -10,6 +10,7 @@ import {
 
 import { isBarrelNodeId } from "../../barrel-view";
 import type { GraphFocusVisual } from "../../graph-interaction";
+import type { LocationColorId } from "../../location-colors";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
 import { Button } from "../../../shared/ui";
@@ -60,6 +61,7 @@ export interface GraphViewportProps {
   padding?: number;
   focusedModuleId?: string | null;
   focusVisual?: GraphFocusVisual | null;
+  locationColorByModuleId?: ReadonlyMap<string, LocationColorId> | null;
   onFocusModule?: (moduleId: string) => void;
   onClearFocus?: () => void;
   onFocusBarrel?: (barrelNodeId: string) => void;
@@ -72,6 +74,7 @@ export function GraphViewport({
   padding,
   focusedModuleId = null,
   focusVisual = null,
+  locationColorByModuleId = null,
   onFocusModule,
   onClearFocus,
   onFocusBarrel,
@@ -356,6 +359,7 @@ export function GraphViewport({
           viewBox={formatViewBox(viewBox)}
           fillContainer
           focusVisual={focusVisual}
+          locationColorByModuleId={locationColorByModuleId}
           expandedBarrelDirectories={expandedBarrelDirectories}
           onNodePointerDown={onNodePointerDown}
         />

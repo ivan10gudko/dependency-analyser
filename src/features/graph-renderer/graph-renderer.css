@@ -158,3 +158,85 @@
   pointer-events: none;
   user-select: none;
 }
+
+.graph-node[data-zone="green"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-green-fill);
+  stroke: var(--graph-zone-green-stroke);
+}
+.graph-node[data-zone="blue"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-blue-fill);
+  stroke: var(--graph-zone-blue-stroke);
+}
+.graph-node[data-zone="purple"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-purple-fill);
+  stroke: var(--graph-zone-purple-stroke);
+}
+.graph-node[data-zone="amber"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-amber-fill);
+  stroke: var(--graph-zone-amber-stroke);
+}
+.graph-node[data-zone="rose"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-rose-fill);
+  stroke: var(--graph-zone-rose-stroke);
+}
+.graph-node[data-zone="teal"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-teal-fill);
+  stroke: var(--graph-zone-teal-stroke);
+}
+.graph-node[data-zone="indigo"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-indigo-fill);
+  stroke: var(--graph-zone-indigo-stroke);
+}
+.graph-node[data-zone="slate"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-slate-fill);
+  stroke: var(--graph-zone-slate-stroke);
+}
+.graph-node[data-zone="orange"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-orange-fill);
+  stroke: var(--graph-zone-orange-stroke);
+}
+.graph-node[data-zone="cyan"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+  fill: var(--graph-zone-cyan-fill);
+  stroke: var(--graph-zone-cyan-stroke);
+}
+
+.graph-edge[data-zone="green"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-green-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="blue"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-blue-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="purple"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-purple-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="amber"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-amber-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="rose"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-rose-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="teal"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-teal-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="indigo"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-indigo-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="slate"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-slate-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="orange"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-orange-stroke);
+  opacity: 0.55;
+}
+.graph-edge[data-zone="cyan"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+  stroke: var(--graph-zone-cyan-stroke);
+  opacity: 0.55;
+}

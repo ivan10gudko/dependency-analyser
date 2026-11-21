@@ -2,10 +2,12 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { LayoutRenderNode } from "../../hierarchical-graph-layout";
 import type { NodeVisualState } from "../../graph-interaction";
+import type { LocationColorId } from "../../location-colors";
 
 export interface GraphNodeProps {
   node: LayoutRenderNode;
   visualState?: NodeVisualState;
+  zoneColorId?: LocationColorId;
   barrelContentsVisible?: boolean;
   onPointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
 }
@@ -13,6 +15,7 @@ export interface GraphNodeProps {
 export function GraphNode({
   node,
   visualState = "default",
+  zoneColorId,
   barrelContentsVisible = false,
   onPointerDown,
 }: GraphNodeProps) {
@@ -32,6 +35,7 @@ export function GraphNode({
       className={className}
       transform={`translate(${node.x}, ${node.y})`}
       data-module-id={node.id}
+      {...(zoneColorId ? { "data-zone": zoneColorId } : {})}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         event.stopPropagation();

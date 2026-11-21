@@ -1,10 +1,21 @@
-import { Button, RangeInput, SelectField } from "../../../shared/ui";
+import { useMemo } from "react";
+
+import { Button, HelpHint, RangeInput, SelectField } from "../../../shared/ui";
 import {
   useGraphInteraction,
   type ConnectivityDepth,
   type FocusDisplayMode,
   type NeighborhoodDirection,
 } from "../../graph-interaction";
+import {
+  listPresetActivity,
+  manualColorForMask,
+  type LocationColorId,
+} from "../../location-colors";
+
+import { LocationColorRulesField } from "./location-color-rules-field";
+import { ViewSectionHeading } from "./view-section-heading";
+import { ZoneColorPicker } from "./zone-color-picker";
 
 const SLIDER_MAX = 5;
 
@@ -31,49 +42,54 @@ export function GraphViewPanel() {
     setFocusDisplayMode,
     setBarrelViewEnabled,
     clearFocus,
+    moduleIds,
+    locationColoringEnabled,
+    locationAutoPresetsEnabled,
+    locationColorRules,
+    setLocationColoringEnabled,
+    setLocationAutoPresetsEnabled,
+    addLocationColorRule,
+    setLocationColorRule,
+    removeLocationColorRule,
   } = useGraphInteraction();
+
+  function setPresetColor(presetMask: string, defaultColorId: LocationColorId, next: LocationColorId) {
+    if (next === defaultColorId) {
+      removeLocationColorRule(presetMask);
+      return;
+    }
+    setLocationColorRule({ mask: presetMask, colorId: next });
+  }
+
+  const presetActivity = useMemo(
+    () => listPresetActivity(moduleIds),
+    [moduleIds],
+  );
 
   const sliderValue =
     connectivityDepth === "all" ? SLIDER_MAX : Math.min(SLIDER_MAX, connectivityDepth);
 
   return (
     <div className="wb-view-panel">
-      <p className="wb-view-intro">
-        Focus mode highlights or isolates the neighborhood around the selected file.
-      </p>
-      <SelectField
-        label="Focus display"
-        value={focusDisplayMode}
-        onChange={(event) =>
-          setFocusDisplayMode(event.target.value as FocusDisplayMode)
-        }
-      >
-        {DISPLAY_MODE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </SelectField>
-      <p className="wb-view-hint">
-        <strong>Dimmed</strong> keeps the full graph and dims unrelated modules.{" "}
-        <strong>Isolated</strong> shows only the focused neighborhood and recalculates layout.
-      </p>
-      <label className="wb-view-toggle">
-        <input
-          type="checkbox"
-          checked={barrelViewEnabled}
-          onChange={(event) => setBarrelViewEnabled(event.target.checked)}
-        />
-        <span>Collapse barrel folders</span>
-      </label>
-      <p className="wb-view-hint">
-        The <strong>index</strong> is always shown as a folder oval. Click the oval to focus (same as
-        selecting index in the explorer); double-click toggles internal modules. Deep imports stay
-        visible (future: Problems warning).
-      </p>
-      <p className="wb-view-section">Neighborhood</p>
+      <ViewSectionHeading
+        title="Neighborhood"
+        help="Controls which modules stay visible when a file is focused: direction of the walk and how many hops to include."
+      />
       <SelectField
         label="Direction"
+        hint={
+          <HelpHint
+            label="Neighborhood direction"
+            content={
+              <>
+                <strong>Dependencies</strong> — modules this file imports.{" "}
+                <strong>Dependents</strong> — modules that import this file. With{" "}
+                <strong>Both</strong>, depth applies separately along imports and along importers
+                (no mixing through a neighbor’s opposite edges).
+              </>
+            }
+          />
+        }
         value={neighborhoodDirection}
         onChange={(event) =>
           setNeighborhoodDirection(event.target.value as NeighborhoodDirection)
@@ -85,14 +101,20 @@ export function GraphViewPanel() {
           </option>
         ))}
       </SelectField>
-      <p className="wb-view-hint">
-        <strong>Dependencies</strong> — modules this file imports.{" "}
-        <strong>Dependents</strong> — modules that import this file.{" "}
-        With Both, depth applies separately along imports and along importers (no
-        mixing through a neighbor’s opposite edges). All is the same walk without a hop limit.
-      </p>
       <RangeInput
         label="Neighborhood depth"
+        hint={
+          <HelpHint
+            label="Neighborhood depth"
+            content={
+              <>
+                1 — direct neighbors only. Higher values include more hops along the chosen
+                direction(s). <strong>Entire reachable set</strong> is the same walk without a hop
+                limit.
+              </>
+            }
+          />
+        }
         min={1}
         max={SLIDER_MAX}
         step={1}
@@ -103,9 +125,6 @@ export function GraphViewPanel() {
           setConnectivityDepth(next);
         }}
       />
-      <p className="wb-view-hint">
-        1 — direct neighbors only. Higher values include more hops along the chosen direction(s).
-      </p>
       <Button
         variant={connectivityDepth === "all" ? "primary" : "ghost"}
         size="sm"
@@ -117,6 +136,119 @@ export function GraphViewPanel() {
         <Button variant="ghost" size="sm" onClick={() => clearFocus()}>
           Reset focus
         </Button>
+      )}
+
+      <ViewSectionHeading title="Focus display" />
+      <SelectField
+        label="Mode"
+        hint={
+          <HelpHint
+            label="Focus display mode"
+            content={
+              <>
+                <strong>Dimmed</strong> keeps the full graph and dims unrelated modules.{" "}
+                <strong>Isolated</strong> shows only the focused neighborhood and recalculates
+                layout.
+              </>
+            }
+          />
+        }
+        value={focusDisplayMode}
+        onChange={(event) =>
+          setFocusDisplayMode(event.target.value as FocusDisplayMode)
+        }
+      >
+        {DISPLAY_MODE_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </SelectField>
+      <label className="wb-view-toggle">
+        <input
+          type="checkbox"
+          checked={barrelViewEnabled}
+          onChange={(event) => setBarrelViewEnabled(event.target.checked)}
+        />
+        <span className="wb-view-toggle-label">
+          Collapse barrel folders
+          <HelpHint
+            label="Barrel folders"
+            content={
+              <>
+                The <strong>index</strong> is always shown as a folder oval. Click the oval to
+                focus (same as selecting index in the explorer); double-click toggles internal
+                modules. Deep imports stay visible (future: Problems warning).
+              </>
+            }
+          />
+        </span>
+      </label>
+
+      <ViewSectionHeading
+        title="Location colors"
+        help="Tint node borders and fills by path mask. Edges use the color of the dependency target (to)."
+      />
+      <label className="wb-view-toggle">
+        <input
+          type="checkbox"
+          checked={locationColoringEnabled}
+          onChange={(event) => setLocationColoringEnabled(event.target.checked)}
+        />
+        <span>Color modules by location</span>
+      </label>
+      <label className="wb-view-toggle">
+        <input
+          type="checkbox"
+          checked={locationAutoPresetsEnabled}
+          disabled={!locationColoringEnabled}
+          onChange={(event) => setLocationAutoPresetsEnabled(event.target.checked)}
+        />
+        <span className="wb-view-toggle-label">
+          Suggest colors for common folders
+          <HelpHint
+            label="Suggested folder colors"
+            content={
+              <>
+                Applies FSD-style defaults (<span className="wb-mask-code">features</span>,{" "}
+                <span className="wb-mask-code">shared</span>, etc.) when matching files exist in the
+                project. Click a color square to change it for this project.
+              </>
+            }
+          />
+        </span>
+      </label>
+      {locationColoringEnabled && locationAutoPresetsEnabled && (
+        <ul className="wb-location-preset-list">
+          {presetActivity.map(({ preset, active }) => {
+            const override = manualColorForMask(locationColorRules, preset.mask);
+            const effectiveColor = override ?? preset.colorId;
+            return (
+              <li
+                key={preset.id}
+                className={`wb-location-preset-row${active ? "" : " is-inactive"}`}
+              >
+                <ZoneColorPicker
+                  colorId={effectiveColor}
+                  disabled={!active}
+                  ariaLabel={`Color for ${preset.label}`}
+                  onChange={(next) => setPresetColor(preset.mask, preset.colorId, next)}
+                />
+                <span className="wb-location-preset-label">{preset.label}</span>
+                <span className="wb-location-preset-mask">{preset.mask}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {locationColoringEnabled && (
+        <LocationColorRulesField
+          rules={locationColorRules}
+          paths={moduleIds}
+          onAdd={addLocationColorRule}
+          onSetColor={setLocationColorRule}
+          onRemove={removeLocationColorRule}
+        />
       )}
     </div>
   );

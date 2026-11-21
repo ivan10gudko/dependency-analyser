@@ -6,6 +6,7 @@ import type {
   GraphFocusVisual,
   NodeVisualState,
 } from "../../graph-interaction";
+import type { LocationColorId } from "../../location-colors";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 import { edgeKey } from "../../graph-interaction/model/focus-neighborhood";
 
@@ -23,6 +24,7 @@ export interface GraphRendererProps {
   viewBox?: string;
   fillContainer?: boolean;
   focusVisual?: GraphFocusVisual | null;
+  locationColorByModuleId?: ReadonlyMap<string, LocationColorId> | null;
   expandedBarrelDirectories?: ReadonlySet<string>;
   onNodePointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
 }
@@ -33,6 +35,7 @@ export function GraphRenderer({
   viewBox: viewBoxProp,
   fillContainer = false,
   focusVisual = null,
+  locationColorByModuleId = null,
   expandedBarrelDirectories,
   onNodePointerDown,
 }: GraphRendererProps) {
@@ -100,6 +103,7 @@ export function GraphRenderer({
           if (!routing) return null;
 
           const visualState = resolveEdgeVisualState(focusVisual, edgeKeyId);
+          const edgeZoneColorId = locationColorByModuleId?.get(edge.to);
 
           return (
             <GraphEdge
@@ -107,6 +111,7 @@ export function GraphRenderer({
               edge={edge}
               routing={routing}
               visualState={visualState}
+              zoneColorId={edgeZoneColorId}
             />
           );
         })}
@@ -118,6 +123,7 @@ export function GraphRenderer({
             key={node.id}
             node={node}
             visualState={resolveNodeVisualState(focusVisual, node.id)}
+            zoneColorId={locationColorByModuleId?.get(node.id)}
             barrelContentsVisible={
               expandedBarrelDirectories !== undefined &&
               node.kind === "barrel" &&

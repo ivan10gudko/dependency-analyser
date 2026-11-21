@@ -1,5 +1,6 @@
 export { Button, type ButtonProps, type ButtonVariant } from "./button";
 export { EmptyState, type EmptyStateProps } from "./empty-state";
+export { HelpHint, type HelpHintProps } from "./help-hint";
 export { IconButton, type IconButtonProps } from "./icon-button";
 export { ListRow, type ListRowProps } from "./list-row";
 export { Menu, MenuBar, MenuItem, MenuSeparator } from "./menu";

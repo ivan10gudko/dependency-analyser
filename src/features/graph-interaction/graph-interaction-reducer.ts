@@ -1,5 +1,12 @@
 import { readStringEnum, writeStringSetting } from "../../lib/persisted-setting";
 import { mergeMasks, normalizeMasks } from "../graph-filters";
+import {
+  isLocationColorId,
+  normalizeLocationColorRules,
+  removeLocationColorRuleByMask,
+  upsertLocationColorRule,
+  type LocationColorRule,
+} from "../location-colors";
 import type { ModuleId } from "../project/types";
 
 import {
@@ -19,6 +26,9 @@ const FOCUS_DISPLAY_MODE_KEY = "dependency-analyser.graph.focusDisplayMode";
 const BARREL_VIEW_STORAGE_KEY = "dependency-analyser.graph.barrelViewEnabled";
 const SHOW_TEST_FILES_KEY = "dependency-analyser.graph.showTestFiles";
 const FILTERS_KEY_PREFIX = "dependency-analyser.graph.filters.";
+const LOCATION_COLORING_KEY = "dependency-analyser.graph.locationColoringEnabled";
+const LOCATION_AUTO_PRESETS_KEY = "dependency-analyser.graph.locationAutoPresetsEnabled";
+const LOCATION_RULES_KEY_PREFIX = "dependency-analyser.graph.locationColors.";
 
 export interface GraphInteractionState {
   focusedModuleId: ModuleId | null;
@@ -31,6 +41,9 @@ export interface GraphInteractionState {
   projectKey: string | null;
   folderMasks: string[];
   fileMasks: string[];
+  locationColoringEnabled: boolean;
+  locationAutoPresetsEnabled: boolean;
+  locationColorRules: LocationColorRule[];
 }
 
 export type GraphInteractionAction =
@@ -47,6 +60,11 @@ export type GraphInteractionAction =
   | { type: "REMOVE_FOLDER_MASK"; mask: string }
   | { type: "ADD_FILE_MASKS"; masks: readonly string[] }
   | { type: "REMOVE_FILE_MASK"; mask: string }
+  | { type: "SET_LOCATION_COLORING"; enabled: boolean }
+  | { type: "SET_LOCATION_AUTO_PRESETS"; enabled: boolean }
+  | { type: "ADD_LOCATION_COLOR_RULE"; rule: LocationColorRule }
+  | { type: "SET_LOCATION_COLOR_RULE"; rule: LocationColorRule }
+  | { type: "REMOVE_LOCATION_COLOR_RULE"; mask: string }
   | { type: "RESET"; projectKey?: string | null };
 
 export function parseConnectivityDepth(raw: string | null): ConnectivityDepth {
@@ -107,6 +125,60 @@ export function persistShowTestFiles(enabled: boolean): void {
   writeStringSetting(SHOW_TEST_FILES_KEY, String(enabled));
 }
 
+export function loadStoredLocationColoringEnabled(): boolean {
+  return localStorage.getItem(LOCATION_COLORING_KEY) === "true";
+}
+
+export function persistLocationColoringEnabled(enabled: boolean): void {
+  writeStringSetting(LOCATION_COLORING_KEY, String(enabled));
+}
+
+export function loadStoredLocationAutoPresetsEnabled(): boolean {
+  const raw = localStorage.getItem(LOCATION_AUTO_PRESETS_KEY);
+  if (raw === null) return true;
+  return raw === "true";
+}
+
+export function persistLocationAutoPresetsEnabled(enabled: boolean): void {
+  writeStringSetting(LOCATION_AUTO_PRESETS_KEY, String(enabled));
+}
+
+export function loadStoredLocationColorRules(projectKey: string | null): LocationColorRule[] {
+  if (!projectKey) return [];
+  try {
+    const raw = localStorage.getItem(locationRulesStorageKey(projectKey));
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const rules: LocationColorRule[] = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+      const record = item as { mask?: unknown; colorId?: unknown };
+      if (typeof record.mask !== "string") continue;
+      if (typeof record.colorId !== "string" || !isLocationColorId(record.colorId)) continue;
+      rules.push({ mask: record.mask, colorId: record.colorId });
+    }
+    return normalizeLocationColorRules(rules);
+  } catch {
+    return [];
+  }
+}
+
+function persistLocationColorRules(
+  projectKey: string | null,
+  rules: readonly LocationColorRule[],
+): void {
+  if (!projectKey) return;
+  writeStringSetting(
+    locationRulesStorageKey(projectKey),
+    JSON.stringify(rules),
+  );
+}
+
+function locationRulesStorageKey(projectKey: string): string {
+  return `${LOCATION_RULES_KEY_PREFIX}${projectKey}`;
+}
+
 export function loadStoredGraphFilters(projectKey: string | null): {
   folderMasks: string[];
   fileMasks: string[];
@@ -150,6 +222,17 @@ function stringList(value: unknown): string[] {
 
 function sameMasks(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((mask, index) => mask === right[index]);
+}
+
+function sameLocationRules(
+  left: readonly LocationColorRule[],
+  right: readonly LocationColorRule[],
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every(
+    (rule, index) =>
+      rule.mask === right[index]!.mask && rule.colorId === right[index]!.colorId,
+  );
 }
 
 export function graphInteractionReducer(
@@ -223,9 +306,37 @@ export function graphInteractionReducer(
       persistGraphFilters(state.projectKey, state.folderMasks, fileMasks);
       return { ...state, fileMasks };
     }
+    case "SET_LOCATION_COLORING":
+      if (state.locationColoringEnabled === action.enabled) return state;
+      persistLocationColoringEnabled(action.enabled);
+      return { ...state, locationColoringEnabled: action.enabled };
+    case "SET_LOCATION_AUTO_PRESETS":
+      if (state.locationAutoPresetsEnabled === action.enabled) return state;
+      persistLocationAutoPresetsEnabled(action.enabled);
+      return { ...state, locationAutoPresetsEnabled: action.enabled };
+    case "ADD_LOCATION_COLOR_RULE":
+    case "SET_LOCATION_COLOR_RULE": {
+      const locationColorRules = upsertLocationColorRule(
+        state.locationColorRules,
+        action.rule,
+      );
+      if (sameLocationRules(state.locationColorRules, locationColorRules)) return state;
+      persistLocationColorRules(state.projectKey, locationColorRules);
+      return { ...state, locationColorRules };
+    }
+    case "REMOVE_LOCATION_COLOR_RULE": {
+      const locationColorRules = removeLocationColorRuleByMask(
+        state.locationColorRules,
+        action.mask,
+      );
+      if (sameLocationRules(state.locationColorRules, locationColorRules)) return state;
+      persistLocationColorRules(state.projectKey, locationColorRules);
+      return { ...state, locationColorRules };
+    }
     case "RESET": {
       const projectKey = action.projectKey ?? null;
       const filters = loadStoredGraphFilters(projectKey);
+      const locationColorRules = loadStoredLocationColorRules(projectKey);
       return {
         focusedModuleId: null,
         connectivityDepth: state.connectivityDepth,
@@ -237,6 +348,9 @@ export function graphInteractionReducer(
         projectKey,
         folderMasks: filters.folderMasks,
         fileMasks: filters.fileMasks,
+        locationColoringEnabled: state.locationColoringEnabled,
+        locationAutoPresetsEnabled: state.locationAutoPresetsEnabled,
+        locationColorRules,
       };
     }
     default:
@@ -256,5 +370,8 @@ export function createInitialGraphInteractionState(): GraphInteractionState {
     projectKey: null,
     folderMasks: [],
     fileMasks: [],
+    locationColoringEnabled: loadStoredLocationColoringEnabled(),
+    locationAutoPresetsEnabled: loadStoredLocationAutoPresetsEnabled(),
+    locationColorRules: [],
   };
 }
