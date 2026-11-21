@@ -2,10 +2,16 @@ import { Button, RangeInput, SelectField } from "../../../shared/ui";
 import {
   useGraphInteraction,
   type ConnectivityDepth,
+  type FocusDisplayMode,
   type NeighborhoodDirection,
 } from "../../graph-interaction";
 
 const SLIDER_MAX = 5;
+
+const DISPLAY_MODE_OPTIONS: { value: FocusDisplayMode; label: string }[] = [
+  { value: "dimmed", label: "Dimmed" },
+  { value: "isolated", label: "Isolated" },
+];
 
 const DIRECTION_OPTIONS: { value: NeighborhoodDirection; label: string }[] = [
   { value: "both", label: "Dependencies and dependents" },
@@ -15,20 +21,42 @@ const DIRECTION_OPTIONS: { value: NeighborhoodDirection; label: string }[] = [
 
 export function GraphViewPanel() {
   const {
+    focusedModuleId,
     connectivityDepth,
     neighborhoodDirection,
+    focusDisplayMode,
     barrelViewEnabled,
     setConnectivityDepth,
     setNeighborhoodDirection,
+    setFocusDisplayMode,
     setBarrelViewEnabled,
+    clearFocus,
   } = useGraphInteraction();
+
   const sliderValue =
     connectivityDepth === "all" ? SLIDER_MAX : Math.min(SLIDER_MAX, connectivityDepth);
 
   return (
     <div className="wb-view-panel">
       <p className="wb-view-intro">
-        Controls how much of the graph stays highlighted around the focused file.
+        Focus mode highlights or isolates the neighborhood around the selected file.
+      </p>
+      <SelectField
+        label="Focus display"
+        value={focusDisplayMode}
+        onChange={(event) =>
+          setFocusDisplayMode(event.target.value as FocusDisplayMode)
+        }
+      >
+        {DISPLAY_MODE_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </SelectField>
+      <p className="wb-view-hint">
+        <strong>Dimmed</strong> keeps the full graph and dims unrelated modules.{" "}
+        <strong>Isolated</strong> shows only the focused neighborhood and recalculates layout.
       </p>
       <label className="wb-view-toggle">
         <input
@@ -43,8 +71,9 @@ export function GraphViewPanel() {
         selecting index in the explorer); double-click toggles internal modules. Deep imports stay
         visible (future: Problems warning).
       </p>
+      <p className="wb-view-section">Neighborhood</p>
       <SelectField
-        label="Highlight traversal"
+        label="Direction"
         value={neighborhoodDirection}
         onChange={(event) =>
           setNeighborhoodDirection(event.target.value as NeighborhoodDirection)
@@ -60,8 +89,7 @@ export function GraphViewPanel() {
         <strong>Dependencies</strong> — modules this file imports.{" "}
         <strong>Dependents</strong> — modules that import this file.{" "}
         With Both, depth applies separately along imports and along importers (no
-        mixing through a neighbor’s opposite edges). Entire reachable set is the same
-        walk without a hop limit.
+        mixing through a neighbor’s opposite edges). All is the same walk without a hop limit.
       </p>
       <RangeInput
         label="Neighborhood depth"
@@ -85,6 +113,11 @@ export function GraphViewPanel() {
       >
         Entire reachable set
       </Button>
+      {focusedModuleId !== null && (
+        <Button variant="ghost" size="sm" onClick={() => clearFocus()}>
+          Reset focus
+        </Button>
+      )}
     </div>
   );
 }

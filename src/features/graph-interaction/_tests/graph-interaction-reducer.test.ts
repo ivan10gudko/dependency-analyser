@@ -5,12 +5,17 @@ import {
   parseConnectivityDepth,
   type GraphInteractionState,
 } from "../graph-interaction-reducer";
-import { DEFAULT_CONNECTIVITY_DEPTH, DEFAULT_NEIGHBORHOOD_DIRECTION } from "../types";
+import {
+  DEFAULT_CONNECTIVITY_DEPTH,
+  DEFAULT_FOCUS_DISPLAY_MODE,
+  DEFAULT_NEIGHBORHOOD_DIRECTION,
+} from "../types";
 
 const baseState = (): GraphInteractionState => ({
   focusedModuleId: null,
   connectivityDepth: DEFAULT_CONNECTIVITY_DEPTH,
   neighborhoodDirection: DEFAULT_NEIGHBORHOOD_DIRECTION,
+  focusDisplayMode: DEFAULT_FOCUS_DISPLAY_MODE,
   barrelViewEnabled: false,
   expandedBarrelDirectories: new Set(),
   showTestFiles: true,
@@ -36,6 +41,48 @@ describe("parseConnectivityDepth", () => {
   it("rejects invalid numbers", () => {
     expect(parseConnectivityDepth("0")).toBe(DEFAULT_CONNECTIVITY_DEPTH);
     expect(parseConnectivityDepth("nope")).toBe(DEFAULT_CONNECTIVITY_DEPTH);
+  });
+});
+
+describe("graphInteractionReducer focus display mode", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    });
+  });
+
+  it("persists isolated display mode", () => {
+    const next = graphInteractionReducer(baseState(), {
+      type: "SET_FOCUS_DISPLAY_MODE",
+      mode: "isolated",
+    });
+    expect(next.focusDisplayMode).toBe("isolated");
+    expect(localStorage.getItem("dependency-analyser.graph.focusDisplayMode")).toBe("isolated");
+  });
+
+  it("ignores duplicate display mode updates", () => {
+    const isolated = graphInteractionReducer(baseState(), {
+      type: "SET_FOCUS_DISPLAY_MODE",
+      mode: "isolated",
+    });
+    const again = graphInteractionReducer(isolated, {
+      type: "SET_FOCUS_DISPLAY_MODE",
+      mode: "isolated",
+    });
+    expect(again).toBe(isolated);
+  });
+
+  it("keeps display mode across project reset", () => {
+    const isolated = graphInteractionReducer(baseState(), {
+      type: "SET_FOCUS_DISPLAY_MODE",
+      mode: "isolated",
+    });
+    const reset = graphInteractionReducer(isolated, { type: "RESET", projectKey: "/repo" });
+    expect(reset.focusDisplayMode).toBe("isolated");
   });
 });
 

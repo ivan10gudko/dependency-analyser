@@ -29,6 +29,7 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
     focusModule,
     clearFocus,
     displayGraph,
+    layoutDisplayGraph,
     toggleBarrelExpand,
     expandedBarrelDirectories,
   } = useGraphInteraction();
@@ -41,14 +42,15 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
   const graphLayout = useMemo(() => {
     const base = workspace.layoutModel;
     if (!base) return null;
-    if (!displayGraph || displayGraph === workspace.dependencyGraph) return base;
-    if (displayGraph.nodes.size === 0) return null;
+    const layoutSource = layoutDisplayGraph;
+    if (!layoutSource || layoutSource === workspace.dependencyGraph) return base;
+    if (layoutSource.nodes.size === 0) return null;
     try {
-      return buildHierarchicalLayout(displayGraph).model;
+      return buildHierarchicalLayout(layoutSource).model;
     } catch {
       return base;
     }
-  }, [workspace.layoutModel, workspace.dependencyGraph, displayGraph]);
+  }, [workspace.layoutModel, workspace.dependencyGraph, layoutDisplayGraph]);
 
   const layoutFocusVisual = useMemo(
     () => enrichFocusVisualForLayout(focusVisual, graphLayout),

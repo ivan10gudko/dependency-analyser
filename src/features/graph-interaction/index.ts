@@ -8,6 +8,9 @@ export {
   computeHighlightedNodeIds,
   edgeKey,
 } from "./model/focus-neighborhood";
+export { computeDisplayHighlightedNodeIds } from "./model/focus-display-highlight";
+export { buildFocusIsolatedSubgraph } from "./model/focus-isolated-subgraph";
+export { buildIsolatedFocusVisual } from "./model/focus-isolated-visual";
 export {
   getDependents,
   getDependencies,
@@ -16,6 +19,7 @@ export {
 } from "./model/module-links";
 export type {
   ConnectivityDepth,
+  FocusDisplayMode,
   NeighborhoodDirection,
   EdgeVisualState,
   GraphFocusVisual,

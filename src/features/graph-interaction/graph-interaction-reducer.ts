@@ -4,14 +4,18 @@ import type { ModuleId } from "../project/types";
 
 import {
   DEFAULT_CONNECTIVITY_DEPTH,
+  DEFAULT_FOCUS_DISPLAY_MODE,
   DEFAULT_NEIGHBORHOOD_DIRECTION,
+  FOCUS_DISPLAY_MODES,
   NEIGHBORHOOD_DIRECTIONS,
   type ConnectivityDepth,
+  type FocusDisplayMode,
   type NeighborhoodDirection,
 } from "./types";
 
 const DEPTH_STORAGE_KEY = "dependency-analyser.graph.connectivityDepth";
 const DIRECTION_STORAGE_KEY = "dependency-analyser.graph.neighborhoodDirection";
+const FOCUS_DISPLAY_MODE_KEY = "dependency-analyser.graph.focusDisplayMode";
 const BARREL_VIEW_STORAGE_KEY = "dependency-analyser.graph.barrelViewEnabled";
 const SHOW_TEST_FILES_KEY = "dependency-analyser.graph.showTestFiles";
 const FILTERS_KEY_PREFIX = "dependency-analyser.graph.filters.";
@@ -20,6 +24,7 @@ export interface GraphInteractionState {
   focusedModuleId: ModuleId | null;
   connectivityDepth: ConnectivityDepth;
   neighborhoodDirection: NeighborhoodDirection;
+  focusDisplayMode: FocusDisplayMode;
   barrelViewEnabled: boolean;
   expandedBarrelDirectories: Set<string>;
   showTestFiles: boolean;
@@ -33,6 +38,7 @@ export type GraphInteractionAction =
   | { type: "CLEAR" }
   | { type: "SET_DEPTH"; depth: ConnectivityDepth }
   | { type: "SET_DIRECTION"; direction: NeighborhoodDirection }
+  | { type: "SET_FOCUS_DISPLAY_MODE"; mode: FocusDisplayMode }
   | { type: "SET_BARREL_VIEW"; enabled: boolean }
   | { type: "TOGGLE_BARREL_EXPAND"; directory: string }
   | { type: "EXPAND_BARREL"; directory: string }
@@ -69,6 +75,18 @@ export function loadStoredNeighborhoodDirection(): NeighborhoodDirection {
 
 export function persistNeighborhoodDirection(direction: NeighborhoodDirection): void {
   writeStringSetting(DIRECTION_STORAGE_KEY, direction);
+}
+
+export function loadStoredFocusDisplayMode(): FocusDisplayMode {
+  return readStringEnum(
+    FOCUS_DISPLAY_MODE_KEY,
+    FOCUS_DISPLAY_MODES,
+    DEFAULT_FOCUS_DISPLAY_MODE,
+  );
+}
+
+export function persistFocusDisplayMode(mode: FocusDisplayMode): void {
+  writeStringSetting(FOCUS_DISPLAY_MODE_KEY, mode);
 }
 
 export function loadStoredBarrelViewEnabled(): boolean {
@@ -153,6 +171,10 @@ export function graphInteractionReducer(
       if (state.neighborhoodDirection === action.direction) return state;
       persistNeighborhoodDirection(action.direction);
       return { ...state, neighborhoodDirection: action.direction };
+    case "SET_FOCUS_DISPLAY_MODE":
+      if (state.focusDisplayMode === action.mode) return state;
+      persistFocusDisplayMode(action.mode);
+      return { ...state, focusDisplayMode: action.mode };
     case "SET_BARREL_VIEW":
       if (state.barrelViewEnabled === action.enabled) return state;
       persistBarrelViewEnabled(action.enabled);
@@ -208,6 +230,7 @@ export function graphInteractionReducer(
         focusedModuleId: null,
         connectivityDepth: state.connectivityDepth,
         neighborhoodDirection: state.neighborhoodDirection,
+        focusDisplayMode: state.focusDisplayMode,
         barrelViewEnabled: state.barrelViewEnabled,
         expandedBarrelDirectories: new Set(),
         showTestFiles: state.showTestFiles,
@@ -226,6 +249,7 @@ export function createInitialGraphInteractionState(): GraphInteractionState {
     focusedModuleId: null,
     connectivityDepth: loadStoredConnectivityDepth(),
     neighborhoodDirection: loadStoredNeighborhoodDirection(),
+    focusDisplayMode: loadStoredFocusDisplayMode(),
     barrelViewEnabled: loadStoredBarrelViewEnabled(),
     expandedBarrelDirectories: new Set(),
     showTestFiles: loadStoredShowTestFiles(),

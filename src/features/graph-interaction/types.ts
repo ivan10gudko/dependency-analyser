@@ -17,6 +17,16 @@ export function isNeighborhoodDirection(raw: string): raw is NeighborhoodDirecti
   return (NEIGHBORHOOD_DIRECTIONS as readonly string[]).includes(raw);
 }
 
+export const FOCUS_DISPLAY_MODES = ["dimmed", "isolated"] as const;
+
+export type FocusDisplayMode = (typeof FOCUS_DISPLAY_MODES)[number];
+
+export const DEFAULT_FOCUS_DISPLAY_MODE: FocusDisplayMode = "dimmed";
+
+export function isFocusDisplayMode(raw: string): raw is FocusDisplayMode {
+  return (FOCUS_DISPLAY_MODES as readonly string[]).includes(raw);
+}
+
 export type NodeVisualState = "default" | "dimmed" | "related" | "focus";
 
 export type EdgeVisualState = "default" | "dimmed" | "highlighted";
@@ -37,6 +47,7 @@ export interface GraphInteractionValue {
   displayFocusModuleId: ModuleId | null;
   connectivityDepth: ConnectivityDepth;
   neighborhoodDirection: NeighborhoodDirection;
+  focusDisplayMode: FocusDisplayMode;
   barrelViewEnabled: boolean;
   expandedBarrelDirectories: ReadonlySet<string>;
   showTestFiles: boolean;
@@ -45,6 +56,7 @@ export interface GraphInteractionValue {
   moduleIds: readonly string[];
   focusVisual: GraphFocusVisual | null;
   displayGraph: ModuleDependencyGraph | null;
+  layoutDisplayGraph: ModuleDependencyGraph | null;
   dependencies: readonly ModuleLinkItem[];
   dependents: readonly ModuleLinkItem[];
   moduleFileStats: ReadonlyMap<ModuleId, ModuleFileStats>;
@@ -53,6 +65,7 @@ export interface GraphInteractionValue {
   clearFocus: () => void;
   setConnectivityDepth: (depth: ConnectivityDepth) => void;
   setNeighborhoodDirection: (direction: NeighborhoodDirection) => void;
+  setFocusDisplayMode: (mode: FocusDisplayMode) => void;
   setBarrelViewEnabled: (enabled: boolean) => void;
   toggleBarrelExpand: (barrelNodeId: string) => void;
   setShowTestFiles: (enabled: boolean) => void;

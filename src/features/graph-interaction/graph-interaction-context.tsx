@@ -27,8 +27,15 @@ import {
   graphInteractionReducer,
   type GraphInteractionAction,
 } from "./graph-interaction-reducer";
+import { buildFocusIsolatedSubgraph } from "./model/focus-isolated-subgraph";
+import { buildIsolatedFocusVisual } from "./model/focus-isolated-visual";
 import { linkListsForModule } from "./model/module-links";
-import type { ConnectivityDepth, GraphInteractionValue, NeighborhoodDirection } from "./types";
+import type {
+  ConnectivityDepth,
+  FocusDisplayMode,
+  GraphInteractionValue,
+  NeighborhoodDirection,
+} from "./types";
 
 const GraphInteractionContext = createContext<GraphInteractionValue | null>(null);
 const GraphInteractionDispatchContext = createContext<
@@ -87,6 +94,34 @@ export function GraphInteractionProvider({
     state.focusedModuleId != null &&
     filteredGraph.nodes.has(state.focusedModuleId);
 
+  const layoutDisplayGraph = useMemo<ModuleDependencyGraph | null>(() => {
+    if (!displayGraph || !filteredGraph) return displayGraph;
+    if (
+      state.focusDisplayMode === "isolated" &&
+      state.focusedModuleId !== null &&
+      focusedModuleIsVisible
+    ) {
+      return buildFocusIsolatedSubgraph(
+        filteredGraph,
+        displayGraph,
+        state.focusedModuleId,
+        state.connectivityDepth,
+        state.neighborhoodDirection,
+        barrelDisplayOptions,
+      );
+    }
+    return displayGraph;
+  }, [
+    displayGraph,
+    filteredGraph,
+    state.focusDisplayMode,
+    state.focusedModuleId,
+    focusedModuleIsVisible,
+    state.connectivityDepth,
+    state.neighborhoodDirection,
+    barrelDisplayOptions,
+  ]);
+
   const displayFocusModuleId = useMemo(() => {
     if (!filteredGraph || state.focusedModuleId === null || !focusedModuleIsVisible) return null;
     return resolveDisplayFocusModuleId(
@@ -100,6 +135,10 @@ export function GraphInteractionProvider({
     if (!filteredGraph || !displayGraph || state.focusedModuleId === null || !focusedModuleIsVisible) {
       return null;
     }
+    if (state.focusDisplayMode === "isolated") {
+      if (!displayFocusModuleId) return null;
+      return buildIsolatedFocusVisual(layoutDisplayGraph ?? displayGraph, displayFocusModuleId);
+    }
     return buildBarrelAwareFocusVisual(
       filteredGraph,
       displayGraph,
@@ -111,7 +150,10 @@ export function GraphInteractionProvider({
   }, [
     filteredGraph,
     displayGraph,
+    layoutDisplayGraph,
+    displayFocusModuleId,
     state.focusedModuleId,
+    state.focusDisplayMode,
     focusedModuleIsVisible,
     barrelDisplayOptions,
     state.connectivityDepth,
@@ -161,6 +203,11 @@ export function GraphInteractionProvider({
     [],
   );
 
+  const setFocusDisplayMode = useCallback(
+    (mode: FocusDisplayMode) => dispatch({ type: "SET_FOCUS_DISPLAY_MODE", mode }),
+    [],
+  );
+
   const setBarrelViewEnabled = useCallback(
     (enabled: boolean) => dispatch({ type: "SET_BARREL_VIEW", enabled }),
     [],
@@ -203,6 +250,7 @@ export function GraphInteractionProvider({
       displayFocusModuleId: displayFocusModuleId,
       connectivityDepth: state.connectivityDepth,
       neighborhoodDirection: state.neighborhoodDirection,
+      focusDisplayMode: state.focusDisplayMode,
       barrelViewEnabled: state.barrelViewEnabled,
       expandedBarrelDirectories: state.expandedBarrelDirectories,
       showTestFiles: state.showTestFiles,
@@ -211,6 +259,7 @@ export function GraphInteractionProvider({
       moduleIds,
       focusVisual,
       displayGraph,
+      layoutDisplayGraph,
       dependencies,
       dependents,
       moduleFileStats,
@@ -219,6 +268,7 @@ export function GraphInteractionProvider({
       clearFocus,
       setConnectivityDepth,
       setNeighborhoodDirection,
+      setFocusDisplayMode,
       setBarrelViewEnabled,
       toggleBarrelExpand,
       setShowTestFiles,
@@ -232,6 +282,7 @@ export function GraphInteractionProvider({
       displayFocusModuleId,
       state.connectivityDepth,
       state.neighborhoodDirection,
+      state.focusDisplayMode,
       state.barrelViewEnabled,
       state.expandedBarrelDirectories,
       state.showTestFiles,
@@ -240,6 +291,7 @@ export function GraphInteractionProvider({
       moduleIds,
       focusVisual,
       displayGraph,
+      layoutDisplayGraph,
       dependencies,
       dependents,
       moduleFileStats,
@@ -248,6 +300,7 @@ export function GraphInteractionProvider({
       clearFocus,
       setConnectivityDepth,
       setNeighborhoodDirection,
+      setFocusDisplayMode,
       setBarrelViewEnabled,
       toggleBarrelExpand,
       setShowTestFiles,

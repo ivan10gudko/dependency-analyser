@@ -1,7 +1,9 @@
 import {
+  computeHighlightedEdgeKeys,
   computeHighlightedNodeIds,
   edgeKey,
 } from "../graph-interaction/model/focus-neighborhood";
+import { computeDisplayHighlightedNodeIds } from "../graph-interaction/model/focus-display-highlight";
 import type {
   ConnectivityDepth,
   EdgeVisualState,
@@ -12,11 +14,7 @@ import type {
 import type { ModuleDependencyGraph } from "../graph-data/types";
 import type { ModuleId } from "../project/types";
 
-import {
-  buildProxyToBarrelMap,
-  mapModuleIdToDisplay,
-  resolveDisplayFocusModuleId,
-} from "./build-barrel-display-graph";
+import { resolveDisplayFocusModuleId } from "./build-barrel-display-graph";
 import type { BarrelDisplayOptions } from "./types";
 
 export function buildBarrelAwareFocusVisual(
@@ -31,38 +29,28 @@ export function buildBarrelAwareFocusVisual(
 
   if (!options.barrelViewEnabled) {
     return buildFocusVisualOnGraph(
-      canonical,
+      display,
       focusedModuleId,
       depth,
       direction,
     );
   }
 
-  const proxyToBarrel = buildProxyToBarrelMap(canonical, options);
-  const canonicalHighlighted = computeHighlightedNodeIds(
-    canonical,
-    focusedModuleId,
-    depth,
-    direction,
-  );
   const displayFocusId = resolveDisplayFocusModuleId(
     focusedModuleId,
     canonical,
     options,
   );
-
-  const displayHighlighted = new Set<ModuleId>();
-  for (const id of canonicalHighlighted) {
-    displayHighlighted.add(
-      mapModuleIdToDisplay(id, canonical, options, proxyToBarrel),
-    );
-  }
-  displayHighlighted.add(displayFocusId);
-
-  const highlightedEdgeKeys = highlightEdgeKeysOnDisplayGraph(
+  const displayHighlighted = computeDisplayHighlightedNodeIds(
+    canonical,
     display,
-    displayHighlighted,
+    focusedModuleId,
+    depth,
+    direction,
+    options,
   );
+
+  const highlightedEdgeKeys = computeHighlightedEdgeKeys(display, displayHighlighted);
 
   const nodeStateById = new Map<ModuleId, NodeVisualState>();
   for (const id of display.nodes.keys()) {
@@ -93,21 +81,6 @@ export function buildBarrelAwareFocusVisual(
   };
 }
 
-function highlightEdgeKeysOnDisplayGraph(
-  display: ModuleDependencyGraph,
-  displayHighlighted: ReadonlySet<ModuleId>,
-): Set<string> {
-  const keys = new Set<string>();
-  for (const [from, targets] of display.adjacencyList) {
-    if (!displayHighlighted.has(from)) continue;
-    for (const to of targets) {
-      if (!displayHighlighted.has(to)) continue;
-      keys.add(edgeKey(from, to));
-    }
-  }
-  return keys;
-}
-
 function buildFocusVisualOnGraph(
   graph: ModuleDependencyGraph,
   focusId: ModuleId,
@@ -121,14 +94,7 @@ function buildFocusVisualOnGraph(
     direction,
   );
 
-  const highlightedEdgeKeys = new Set<string>();
-  for (const [from, targets] of graph.adjacencyList) {
-    if (!highlightedNodeIds.has(from)) continue;
-    for (const to of targets) {
-      if (!highlightedNodeIds.has(to)) continue;
-      highlightedEdgeKeys.add(edgeKey(from, to));
-    }
-  }
+  const highlightedEdgeKeys = computeHighlightedEdgeKeys(graph, highlightedNodeIds);
 
   const nodeStateById = new Map<ModuleId, NodeVisualState>();
   for (const id of graph.nodes.keys()) {
