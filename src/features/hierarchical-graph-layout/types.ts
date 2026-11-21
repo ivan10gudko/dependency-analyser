@@ -34,6 +34,11 @@ export const DEFAULT_MODULE_NODE_SIZE: NodeDimensions = {
   height: 28,
 };
 
+export const DEFAULT_BARREL_NODE_SIZE: NodeDimensions = {
+  width: 168,
+  height: 40,
+};
+
 const LABEL_CHAR_PX = 7.2;
 const NODE_HORIZONTAL_PADDING = 28;
 const MAX_MODULE_NODE_WIDTH = 320;

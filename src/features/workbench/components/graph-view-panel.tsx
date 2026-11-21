@@ -17,8 +17,10 @@ export function GraphViewPanel() {
   const {
     connectivityDepth,
     neighborhoodDirection,
+    barrelViewEnabled,
     setConnectivityDepth,
     setNeighborhoodDirection,
+    setBarrelViewEnabled,
   } = useGraphInteraction();
   const sliderValue =
     connectivityDepth === "all" ? SLIDER_MAX : Math.min(SLIDER_MAX, connectivityDepth);
@@ -27,6 +29,19 @@ export function GraphViewPanel() {
     <div className="wb-view-panel">
       <p className="wb-view-intro">
         Controls how much of the graph stays highlighted around the focused file.
+      </p>
+      <label className="wb-view-toggle">
+        <input
+          type="checkbox"
+          checked={barrelViewEnabled}
+          onChange={(event) => setBarrelViewEnabled(event.target.checked)}
+        />
+        <span>Collapse barrel folders</span>
+      </label>
+      <p className="wb-view-hint">
+        The <strong>index</strong> is always shown as a folder oval. Click the oval to focus (same as
+        selecting index in the explorer); double-click toggles internal modules. Deep imports stay
+        visible (future: Problems warning).
       </p>
       <SelectField
         label="Highlight traversal"

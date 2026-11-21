@@ -1,3 +1,4 @@
+import { isBarrelNodeId } from "../barrel-view";
 import { inDegrees } from "../../lib/graph";
 import type { ModuleDependencyGraph, NodeId } from "../graph-data/types";
 
@@ -14,9 +15,12 @@ import { buildInitialLayerOrder, type LayerOrder } from "./layer-order";
 import { breakCycles } from "./remove-cycles";
 import type { LayoutGraph } from "./types";
 
+export type LayoutRenderNodeKind = "module" | "barrel";
+
 export interface LayoutRenderNode {
   id: string;
   isDummy: boolean;
+  kind?: LayoutRenderNodeKind;
   label?: string;
   layer: number;
   x: number;
@@ -162,9 +166,11 @@ export function toLayoutRenderModel(
       throw new Error(`layout node ${node.id} is missing x/y coordinates`);
     }
 
+    const kind = !node.isDummy && isBarrelNodeId(node.id) ? "barrel" : "module";
     nodes.push({
       id: node.id,
       isDummy: node.isDummy,
+      kind: node.isDummy ? undefined : kind,
       label: node.module?.name ?? (node.isDummy ? undefined : node.id),
       layer: node.layer,
       x: node.x,

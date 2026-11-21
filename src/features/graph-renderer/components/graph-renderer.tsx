@@ -1,6 +1,11 @@
 import { useMemo, type PointerEvent as ReactPointerEvent } from "react";
 
-import type { GraphFocusVisual } from "../../graph-interaction";
+import { barrelFolderFromNodeId } from "../../barrel-view";
+import type {
+  EdgeVisualState,
+  GraphFocusVisual,
+  NodeVisualState,
+} from "../../graph-interaction";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 import { edgeKey } from "../../graph-interaction/model/focus-neighborhood";
 
@@ -18,6 +23,7 @@ export interface GraphRendererProps {
   viewBox?: string;
   fillContainer?: boolean;
   focusVisual?: GraphFocusVisual | null;
+  expandedBarrelDirectories?: ReadonlySet<string>;
   onNodePointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
 }
 
@@ -27,6 +33,7 @@ export function GraphRenderer({
   viewBox: viewBoxProp,
   fillContainer = false,
   focusVisual = null,
+  expandedBarrelDirectories,
   onNodePointerDown,
 }: GraphRendererProps) {
   const bounds = useMemo(
@@ -92,7 +99,7 @@ export function GraphRenderer({
           const routing = routingProfiles.get(edgeKeyId);
           if (!routing) return null;
 
-          const visualState = focusVisual?.edgeStateByKey.get(edgeKeyId) ?? "default";
+          const visualState = resolveEdgeVisualState(focusVisual, edgeKeyId);
 
           return (
             <GraphEdge
@@ -110,11 +117,39 @@ export function GraphRenderer({
           <GraphNode
             key={node.id}
             node={node}
-            visualState={focusVisual?.nodeStateById.get(node.id) ?? "default"}
+            visualState={resolveNodeVisualState(focusVisual, node.id)}
+            barrelContentsVisible={
+              expandedBarrelDirectories !== undefined &&
+              node.kind === "barrel" &&
+              (() => {
+                const dir = barrelFolderFromNodeId(node.id);
+                return dir !== null && expandedBarrelDirectories.has(dir);
+              })()
+            }
             onPointerDown={onNodePointerDown}
           />
         ))}
       </g>
     </svg>
   );
+}
+
+function resolveNodeVisualState(
+  focusVisual: GraphFocusVisual | null | undefined,
+  nodeId: string,
+): NodeVisualState {
+  if (!focusVisual?.active) {
+    return focusVisual?.nodeStateById.get(nodeId) ?? "default";
+  }
+  return focusVisual.nodeStateById.get(nodeId) ?? "dimmed";
+}
+
+function resolveEdgeVisualState(
+  focusVisual: GraphFocusVisual | null | undefined,
+  edgeKeyId: string,
+): EdgeVisualState {
+  if (!focusVisual?.active) {
+    return focusVisual?.edgeStateByKey.get(edgeKeyId) ?? "default";
+  }
+  return focusVisual.edgeStateByKey.get(edgeKeyId) ?? "dimmed";
 }

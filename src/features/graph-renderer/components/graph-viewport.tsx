@@ -8,6 +8,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 
+import { isBarrelNodeId } from "../../barrel-view";
 import type { GraphFocusVisual } from "../../graph-interaction";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
@@ -30,6 +31,7 @@ const WHEEL_ZOOM_FACTOR = 1.12;
 const MIN_VIEW_WIDTH_RATIO = 0.08;
 const MAX_VIEW_WIDTH_RATIO = 8;
 const PAN_CLICK_THRESHOLD_PX = 4;
+const BARREL_DOUBLE_CLICK_MS = 450;
 const EMPTY_NODE_OFFSETS: ReadonlyMap<string, NodeOffset> = new Map();
 
 interface PanDragState {
@@ -60,6 +62,9 @@ export interface GraphViewportProps {
   focusVisual?: GraphFocusVisual | null;
   onFocusModule?: (moduleId: string) => void;
   onClearFocus?: () => void;
+  onFocusBarrel?: (barrelNodeId: string) => void;
+  onToggleBarrelExpand?: (barrelNodeId: string) => void;
+  expandedBarrelDirectories?: ReadonlySet<string>;
 }
 
 export function GraphViewport({
@@ -69,10 +74,14 @@ export function GraphViewport({
   focusVisual = null,
   onFocusModule,
   onClearFocus,
+  onFocusBarrel,
+  onToggleBarrelExpand,
+  expandedBarrelDirectories,
 }: GraphViewportProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<ViewportDragState | null>(null);
   const lastFramedFocusRef = useRef<string | null>(null);
+  const lastBarrelTapRef = useRef<{ id: string; at: number } | null>(null);
 
   const baseViewBox = useMemo(() => {
     const bounds = computeLayoutBounds(layout.nodes, padding);
@@ -100,9 +109,10 @@ export function GraphViewport({
   }, [activeOffsets, layout]);
 
   useEffect(() => {
+    if (focusedModuleId !== null) return;
     setViewBox(baseViewBox);
     lastFramedFocusRef.current = null;
-  }, [baseViewBox]);
+  }, [baseViewBox, focusedModuleId]);
 
   const clampZoom = useCallback(
     (rect: ViewBoxRect): ViewBoxRect => {
@@ -130,7 +140,12 @@ export function GraphViewport({
     if (!host || host.clientWidth <= 0 || host.clientHeight <= 0) return;
 
     const aspect = host.clientWidth / host.clientHeight;
-    const proposed = viewBoxForGraphFocus(displayLayout, focusVisual, aspect);
+    const proposed = viewBoxForGraphFocus(
+      displayLayout,
+      focusVisual,
+      aspect,
+      focusedModuleId,
+    );
     if (!proposed) return;
 
     setViewBox(clampZoom(proposed));
@@ -226,6 +241,26 @@ export function GraphViewport({
     );
   }, []);
 
+  const handleBarrelClick = useCallback(
+    (barrelNodeId: string) => {
+      const now = Date.now();
+      const last = lastBarrelTapRef.current;
+      if (
+        last &&
+        last.id === barrelNodeId &&
+        now - last.at <= BARREL_DOUBLE_CLICK_MS
+      ) {
+        lastBarrelTapRef.current = null;
+        onToggleBarrelExpand?.(barrelNodeId);
+        return;
+      }
+
+      lastBarrelTapRef.current = { id: barrelNodeId, at: now };
+      onFocusBarrel?.(barrelNodeId);
+    },
+    [onFocusBarrel, onToggleBarrelExpand],
+  );
+
   const finishPointer = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const drag = dragRef.current;
@@ -240,7 +275,13 @@ export function GraphViewport({
       viewportRef.current?.releasePointerCapture(event.pointerId);
 
       if (drag.kind === "node") {
-        if (distance < PAN_CLICK_THRESHOLD_PX) onFocusModule?.(drag.moduleId);
+        if (distance < PAN_CLICK_THRESHOLD_PX) {
+          if (isBarrelNodeId(drag.moduleId)) {
+            handleBarrelClick(drag.moduleId);
+          } else {
+            onFocusModule?.(drag.moduleId);
+          }
+        }
         return;
       }
 
@@ -252,7 +293,7 @@ export function GraphViewport({
 
       onClearFocus();
     },
-    [onClearFocus, onFocusModule],
+    [handleBarrelClick, onClearFocus, onFocusModule],
   );
 
   const zoomBy = useCallback(
@@ -315,6 +356,7 @@ export function GraphViewport({
           viewBox={formatViewBox(viewBox)}
           fillContainer
           focusVisual={focusVisual}
+          expandedBarrelDirectories={expandedBarrelDirectories}
           onNodePointerDown={onNodePointerDown}
         />
       </div>

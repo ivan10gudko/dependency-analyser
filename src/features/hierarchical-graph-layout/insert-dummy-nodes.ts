@@ -1,8 +1,10 @@
+import { isBarrelNodeId } from "../barrel-view";
 import { cloneAdjacencyList, neighborSet } from "../../lib/graph";
 import type { GraphNode, ModuleDependencyGraph, NodeId } from "../graph-data/types";
 
 import type { NodeLayers } from "./assign-layers";
 import {
+  DEFAULT_BARREL_NODE_SIZE,
   DEFAULT_MODULE_NODE_SIZE,
   DUMMY_NODE_PREFIX,
   moduleNodeWidthForLabel,
@@ -79,13 +81,20 @@ function layoutNodeFromModule(
   layer: number,
   size: NodeDimensions,
 ): LayoutNode {
+  const isBarrel = isBarrelNodeId(module.id);
+  const barrelSize = DEFAULT_BARREL_NODE_SIZE;
+  const width = isBarrel
+    ? moduleNodeWidthForLabel(module.name, barrelSize.width)
+    : moduleNodeWidthForLabel(module.name, size.width);
+  const height = isBarrel ? barrelSize.height : size.height;
+
   return {
     id: module.id,
     isDummy: false,
     module,
     layer,
-    width: moduleNodeWidthForLabel(module.name, size.width),
-    height: size.height,
+    width,
+    height,
   };
 }
 

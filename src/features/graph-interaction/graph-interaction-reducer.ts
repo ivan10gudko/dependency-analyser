@@ -11,11 +11,14 @@ import {
 
 const DEPTH_STORAGE_KEY = "dependency-analyser.graph.connectivityDepth";
 const DIRECTION_STORAGE_KEY = "dependency-analyser.graph.neighborhoodDirection";
+const BARREL_VIEW_STORAGE_KEY = "dependency-analyser.graph.barrelViewEnabled";
 
 export interface GraphInteractionState {
   focusedModuleId: ModuleId | null;
   connectivityDepth: ConnectivityDepth;
   neighborhoodDirection: NeighborhoodDirection;
+  barrelViewEnabled: boolean;
+  expandedBarrelDirectories: Set<string>;
 }
 
 export type GraphInteractionAction =
@@ -23,6 +26,9 @@ export type GraphInteractionAction =
   | { type: "CLEAR" }
   | { type: "SET_DEPTH"; depth: ConnectivityDepth }
   | { type: "SET_DIRECTION"; direction: NeighborhoodDirection }
+  | { type: "SET_BARREL_VIEW"; enabled: boolean }
+  | { type: "TOGGLE_BARREL_EXPAND"; directory: string }
+  | { type: "EXPAND_BARREL"; directory: string }
   | { type: "RESET" };
 
 export function parseConnectivityDepth(raw: string | null): ConnectivityDepth {
@@ -53,6 +59,14 @@ export function persistNeighborhoodDirection(direction: NeighborhoodDirection): 
   writeStringSetting(DIRECTION_STORAGE_KEY, direction);
 }
 
+export function loadStoredBarrelViewEnabled(): boolean {
+  return localStorage.getItem(BARREL_VIEW_STORAGE_KEY) === "true";
+}
+
+export function persistBarrelViewEnabled(enabled: boolean): void {
+  writeStringSetting(BARREL_VIEW_STORAGE_KEY, String(enabled));
+}
+
 export function graphInteractionReducer(
   state: GraphInteractionState,
   action: GraphInteractionAction,
@@ -72,11 +86,33 @@ export function graphInteractionReducer(
       if (state.neighborhoodDirection === action.direction) return state;
       persistNeighborhoodDirection(action.direction);
       return { ...state, neighborhoodDirection: action.direction };
+    case "SET_BARREL_VIEW":
+      if (state.barrelViewEnabled === action.enabled) return state;
+      persistBarrelViewEnabled(action.enabled);
+      return {
+        ...state,
+        barrelViewEnabled: action.enabled,
+        expandedBarrelDirectories: new Set(),
+      };
+    case "TOGGLE_BARREL_EXPAND": {
+      const next = new Set(state.expandedBarrelDirectories);
+      if (next.has(action.directory)) next.delete(action.directory);
+      else next.add(action.directory);
+      return { ...state, expandedBarrelDirectories: next };
+    }
+    case "EXPAND_BARREL": {
+      if (state.expandedBarrelDirectories.has(action.directory)) return state;
+      const next = new Set(state.expandedBarrelDirectories);
+      next.add(action.directory);
+      return { ...state, expandedBarrelDirectories: next };
+    }
     case "RESET":
       return {
         focusedModuleId: null,
         connectivityDepth: state.connectivityDepth,
         neighborhoodDirection: state.neighborhoodDirection,
+        barrelViewEnabled: state.barrelViewEnabled,
+        expandedBarrelDirectories: new Set(),
       };
     default:
       return state;
@@ -88,5 +124,7 @@ export function createInitialGraphInteractionState(): GraphInteractionState {
     focusedModuleId: null,
     connectivityDepth: loadStoredConnectivityDepth(),
     neighborhoodDirection: loadStoredNeighborhoodDirection(),
+    barrelViewEnabled: loadStoredBarrelViewEnabled(),
+    expandedBarrelDirectories: new Set(),
   };
 }

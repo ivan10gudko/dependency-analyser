@@ -122,6 +122,17 @@
   stroke-width: 1.25;
 }
 
+.graph-node--barrel .graph-node-box {
+  fill: color-mix(in srgb, var(--color-graph-node-fill) 88%, var(--color-accent));
+  stroke: color-mix(in srgb, var(--color-accent) 40%, var(--color-graph-node-stroke));
+  stroke-width: 1.5;
+}
+
+.graph-node--barrel-open .graph-node-box {
+  stroke-dasharray: 4 3;
+  stroke: var(--color-accent);
+}
+
 .graph-edge--dimmed {
   opacity: 0.12;
 }

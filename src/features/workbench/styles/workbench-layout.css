@@ -329,3 +329,18 @@
   color: var(--color-fg-muted);
   line-height: 1.45;
 }
+
+.wb-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+  color: var(--color-fg);
+  cursor: pointer;
+  user-select: none;
+}
+
+.wb-view-toggle input {
+  margin: 0;
+  accent-color: var(--color-accent);
+}

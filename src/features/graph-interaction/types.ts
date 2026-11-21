@@ -1,3 +1,4 @@
+import type { ModuleDependencyGraph } from "../graph-data/types";
 import type { ModuleId } from "../project/types";
 import type { ModuleFileStats } from "../project/module-file-stats";
 
@@ -33,9 +34,13 @@ export interface ModuleLinkItem {
 
 export interface GraphInteractionValue {
   focusedModuleId: ModuleId | null;
+  displayFocusModuleId: ModuleId | null;
   connectivityDepth: ConnectivityDepth;
   neighborhoodDirection: NeighborhoodDirection;
+  barrelViewEnabled: boolean;
+  expandedBarrelDirectories: ReadonlySet<string>;
   focusVisual: GraphFocusVisual | null;
+  displayGraph: ModuleDependencyGraph | null;
   dependencies: readonly ModuleLinkItem[];
   dependents: readonly ModuleLinkItem[];
   moduleFileStats: ReadonlyMap<ModuleId, ModuleFileStats>;
@@ -44,4 +49,6 @@ export interface GraphInteractionValue {
   clearFocus: () => void;
   setConnectivityDepth: (depth: ConnectivityDepth) => void;
   setNeighborhoodDirection: (direction: NeighborhoodDirection) => void;
+  setBarrelViewEnabled: (enabled: boolean) => void;
+  toggleBarrelExpand: (barrelNodeId: string) => void;
 }

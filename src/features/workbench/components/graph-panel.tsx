@@ -1,4 +1,12 @@
+import { useCallback, useMemo } from "react";
+
+import {
+  barrelFolderFromNodeId,
+  detectBarrelFolders,
+} from "../../barrel-view";
 import { useGraphInteraction } from "../../graph-interaction";
+import { enrichFocusVisualForLayout } from "../../graph-interaction/model/enrich-focus-visual";
+import { buildHierarchicalLayout } from "../../hierarchical-graph-layout";
 import { Button, EmptyState, Surface } from "../../../shared/ui";
 import { GraphViewport } from "../../graph-renderer";
 import type { LoadingState, ProjectWorkspace } from "../../project/types/workspace";
@@ -15,7 +23,45 @@ export interface GraphPanelProps {
 }
 
 export function GraphPanel({ workspace }: GraphPanelProps) {
-  const { focusedModuleId, focusVisual, focusModule, clearFocus } = useGraphInteraction();
+  const {
+    displayFocusModuleId,
+    focusVisual,
+    focusModule,
+    clearFocus,
+    barrelViewEnabled,
+    displayGraph,
+    toggleBarrelExpand,
+    expandedBarrelDirectories,
+  } = useGraphInteraction();
+
+  const graphLayout = useMemo(() => {
+    const base = workspace.layoutModel;
+    if (!base) return null;
+    if (!barrelViewEnabled || !displayGraph) return base;
+    try {
+      return buildHierarchicalLayout(displayGraph).model;
+    } catch {
+      return base;
+    }
+  }, [workspace.layoutModel, barrelViewEnabled, displayGraph]);
+
+  const layoutFocusVisual = useMemo(
+    () => enrichFocusVisualForLayout(focusVisual, graphLayout),
+    [focusVisual, graphLayout],
+  );
+
+  const focusBarrelNode = useCallback(
+    (barrelNodeId: string) => {
+      const graph = workspace.dependencyGraph;
+      if (!graph) return;
+      const directory = barrelFolderFromNodeId(barrelNodeId);
+      if (!directory) return;
+      const folder = detectBarrelFolders(graph).get(directory);
+      if (!folder) return;
+      focusModule(folder.indexModuleId);
+    },
+    [workspace.dependencyGraph, focusModule],
+  );
 
   const showWelcome =
     !workspace.projectRootAbsolute && workspace.loading === "idle" && !workspace.error;
@@ -52,13 +98,16 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
         </div>
       )}
 
-      {showLayout && workspace.layoutModel && (
+      {showLayout && graphLayout && (
         <GraphViewport
-          layout={workspace.layoutModel}
-          focusedModuleId={focusedModuleId}
-          focusVisual={focusVisual}
+          layout={graphLayout}
+          focusedModuleId={displayFocusModuleId}
+          focusVisual={layoutFocusVisual}
           onFocusModule={focusModule}
           onClearFocus={clearFocus}
+          onFocusBarrel={focusBarrelNode}
+          onToggleBarrelExpand={toggleBarrelExpand}
+          expandedBarrelDirectories={expandedBarrelDirectories}
         />
       )}
 

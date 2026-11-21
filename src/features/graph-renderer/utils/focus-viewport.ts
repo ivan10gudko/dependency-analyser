@@ -79,11 +79,15 @@ export function viewBoxForGraphFocus(
   layout: LayoutRenderModel,
   focusVisual: GraphFocusVisual | null,
   viewportAspect: number,
+  focusNodeId?: string | null,
 ): ViewBoxRect | null {
   const highlightedIds = collectHighlightedModuleIds(focusVisual);
-  const count = Math.max(1, highlightedIds.size);
+  const count = Math.max(1, highlightedIds.size || (focusNodeId ? 1 : 0));
   const padding = focusFitPaddingForCount(count);
-  const content = contentBoundsForHighlight(layout, highlightedIds, padding);
+  let content = contentBoundsForHighlight(layout, highlightedIds, padding);
+  if (!content && focusNodeId) {
+    content = contentBoundsForHighlight(layout, new Set([focusNodeId]), padding);
+  }
   if (!content) return null;
 
   const paddingRatio = count <= 3 ? 0.12 : count <= 10 ? 0.16 : 0.2;

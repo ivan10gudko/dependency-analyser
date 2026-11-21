@@ -6,14 +6,26 @@ import type { NodeVisualState } from "../../graph-interaction";
 export interface GraphNodeProps {
   node: LayoutRenderNode;
   visualState?: NodeVisualState;
+  barrelContentsVisible?: boolean;
   onPointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
 }
 
-export function GraphNode({ node, visualState = "default", onPointerDown }: GraphNodeProps) {
+export function GraphNode({
+  node,
+  visualState = "default",
+  barrelContentsVisible = false,
+  onPointerDown,
+}: GraphNodeProps) {
   if (node.isDummy) return null;
 
   const label = displayLabel(node);
-  const className = classNames("graph-node", visualStateClass(visualState));
+  const isBarrel = node.kind === "barrel";
+  const className = classNames(
+    "graph-node",
+    isBarrel ? "graph-node--barrel" : undefined,
+    isBarrel && barrelContentsVisible ? "graph-node--barrel-open" : undefined,
+    visualStateClass(visualState),
+  );
 
   return (
     <g
@@ -26,13 +38,23 @@ export function GraphNode({ node, visualState = "default", onPointerDown }: Grap
         onPointerDown?.(event);
       }}
     >
-      <rect
-        className="graph-node-box"
-        width={node.width}
-        height={node.height}
-        rx={4}
-        ry={4}
-      />
+      {isBarrel ? (
+        <ellipse
+          className="graph-node-box"
+          cx={node.width / 2}
+          cy={node.height / 2}
+          rx={node.width / 2}
+          ry={node.height / 2}
+        />
+      ) : (
+        <rect
+          className="graph-node-box"
+          width={node.width}
+          height={node.height}
+          rx={4}
+          ry={4}
+        />
+      )}
       <text
         className="graph-node-label"
         x={node.width / 2}

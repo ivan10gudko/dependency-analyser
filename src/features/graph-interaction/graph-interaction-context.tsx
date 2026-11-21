@@ -8,8 +8,17 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  buildBarrelAwareFocusVisual,
+  buildBarrelDisplayGraph,
+  detectBarrelFolders,
+  isModuleHiddenInBarrelView,
+  resolveDisplayFocusModuleId,
+  barrelFolderFromNodeId,
+} from "../barrel-view";
 import type { ModuleDependencyGraph } from "../graph-data/types";
 import type { ModuleFileStats } from "../project/module-file-stats";
+import { directoryOf } from "../../lib/path";
 import type { ModuleId } from "../project/types";
 
 import {
@@ -17,7 +26,6 @@ import {
   graphInteractionReducer,
   type GraphInteractionAction,
 } from "./graph-interaction-reducer";
-import { buildFocusVisual } from "./model/focus-neighborhood";
 import { linkListsForModule } from "./model/module-links";
 import type { ConnectivityDepth, GraphInteractionValue, NeighborhoodDirection } from "./types";
 
@@ -51,17 +59,43 @@ export function GraphInteractionProvider({
     dispatch({ type: "RESET" });
   }, [projectKey]);
 
+  const barrelDisplayOptions = useMemo(
+    () => ({
+      barrelViewEnabled: state.barrelViewEnabled,
+      expandedDirectories: state.expandedBarrelDirectories,
+    }),
+    [state.barrelViewEnabled, state.expandedBarrelDirectories],
+  );
+
+  const displayGraph = useMemo<ModuleDependencyGraph | null>(() => {
+    if (!dependencyGraph) return null;
+    return buildBarrelDisplayGraph(dependencyGraph, barrelDisplayOptions);
+  }, [dependencyGraph, barrelDisplayOptions]);
+
+  const displayFocusModuleId = useMemo(() => {
+    if (!dependencyGraph || state.focusedModuleId === null) return null;
+    return resolveDisplayFocusModuleId(
+      state.focusedModuleId,
+      dependencyGraph,
+      barrelDisplayOptions,
+    );
+  }, [dependencyGraph, state.focusedModuleId, barrelDisplayOptions]);
+
   const focusVisual = useMemo(
     () =>
-      buildFocusVisual(
+      buildBarrelAwareFocusVisual(
         dependencyGraph,
+        displayGraph,
         state.focusedModuleId,
+        barrelDisplayOptions,
         state.connectivityDepth,
         state.neighborhoodDirection,
       ),
     [
       dependencyGraph,
+      displayGraph,
       state.focusedModuleId,
+      barrelDisplayOptions,
       state.connectivityDepth,
       state.neighborhoodDirection,
     ],
@@ -75,8 +109,19 @@ export function GraphInteractionProvider({
   }, [dependencyGraph, state.focusedModuleId]);
 
   const focusModule = useCallback(
-    (id: ModuleId) => dispatch({ type: "FOCUS", id }),
-    [],
+    (id: ModuleId) => {
+      if (dependencyGraph && state.barrelViewEnabled) {
+        const dir = directoryOf(id);
+        const folder = detectBarrelFolders(dependencyGraph).get(dir);
+        if (folder?.indexModuleId === id) {
+          dispatch({ type: "EXPAND_BARREL", directory: folder.directory });
+        } else if (isModuleHiddenInBarrelView(id, dependencyGraph, barrelDisplayOptions)) {
+          dispatch({ type: "EXPAND_BARREL", directory: dir });
+        }
+      }
+      dispatch({ type: "FOCUS", id });
+    },
+    [dependencyGraph, state.barrelViewEnabled, barrelDisplayOptions],
   );
 
   const clearFocus = useCallback(() => dispatch({ type: "CLEAR" }), []);
@@ -91,12 +136,27 @@ export function GraphInteractionProvider({
     [],
   );
 
+  const setBarrelViewEnabled = useCallback(
+    (enabled: boolean) => dispatch({ type: "SET_BARREL_VIEW", enabled }),
+    [],
+  );
+
+  const toggleBarrelExpand = useCallback((barrelNodeId: string) => {
+    const directory = barrelFolderFromNodeId(barrelNodeId);
+    if (!directory) return;
+    dispatch({ type: "TOGGLE_BARREL_EXPAND", directory });
+  }, []);
+
   const value = useMemo<GraphInteractionValue>(
     () => ({
       focusedModuleId: state.focusedModuleId,
+      displayFocusModuleId: displayFocusModuleId,
       connectivityDepth: state.connectivityDepth,
       neighborhoodDirection: state.neighborhoodDirection,
+      barrelViewEnabled: state.barrelViewEnabled,
+      expandedBarrelDirectories: state.expandedBarrelDirectories,
       focusVisual,
+      displayGraph,
       dependencies,
       dependents,
       moduleFileStats,
@@ -105,12 +165,18 @@ export function GraphInteractionProvider({
       clearFocus,
       setConnectivityDepth,
       setNeighborhoodDirection,
+      setBarrelViewEnabled,
+      toggleBarrelExpand,
     }),
     [
       state.focusedModuleId,
+      displayFocusModuleId,
       state.connectivityDepth,
       state.neighborhoodDirection,
+      state.barrelViewEnabled,
+      state.expandedBarrelDirectories,
       focusVisual,
+      displayGraph,
       dependencies,
       dependents,
       moduleFileStats,
@@ -119,6 +185,8 @@ export function GraphInteractionProvider({
       clearFocus,
       setConnectivityDepth,
       setNeighborhoodDirection,
+      setBarrelViewEnabled,
+      toggleBarrelExpand,
     ],
   );
 
