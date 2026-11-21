@@ -15,6 +15,10 @@ import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
 import { Button } from "../../../shared/ui";
 
+import {
+  BARREL_DOUBLE_CLICK_MS,
+  resolveBarrelPointerAction,
+} from "../barrel-pointer-action";
 import { GraphRenderer } from "./graph-renderer";
 import {
   resolveFocusFramePlan,
@@ -41,7 +45,6 @@ const FOCUS_REVEAL_OUT_MS = 720;
 const FOCUS_REVEAL_HOLD_MS = 650;
 const FOCUS_REVEAL_IN_MS = 360;
 const PAN_CLICK_THRESHOLD_PX = 4;
-const BARREL_DOUBLE_CLICK_MS = 450;
 const EMPTY_NODE_OFFSETS: ReadonlyMap<string, NodeOffset> = new Map();
 
 interface PanDragState {
@@ -94,6 +97,7 @@ export function GraphViewport({
   const dragRef = useRef<ViewportDragState | null>(null);
   const lastFramedFocusRef = useRef<string | null>(null);
   const lastBarrelTapRef = useRef<{ id: string; at: number } | null>(null);
+  const pendingBarrelFocusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusFrameAnimationRef = useRef<number | null>(null);
   const focusRevealHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -317,24 +321,40 @@ export function GraphViewport({
     );
   }, []);
 
+  const cancelPendingBarrelFocus = useCallback(() => {
+    if (pendingBarrelFocusRef.current === null) return;
+    clearTimeout(pendingBarrelFocusRef.current);
+    pendingBarrelFocusRef.current = null;
+  }, []);
+
+  useEffect(() => () => cancelPendingBarrelFocus(), [cancelPendingBarrelFocus]);
+
   const handleBarrelClick = useCallback(
-    (barrelNodeId: string) => {
-      const now = Date.now();
-      const last = lastBarrelTapRef.current;
-      if (
-        last &&
-        last.id === barrelNodeId &&
-        now - last.at <= BARREL_DOUBLE_CLICK_MS
-      ) {
-        lastBarrelTapRef.current = null;
+    (barrelNodeId: string, modifiers: { altKey: boolean }) => {
+      const result = resolveBarrelPointerAction({
+        barrelNodeId,
+        now: Date.now(),
+        lastTap: lastBarrelTapRef.current,
+        altKey: modifiers.altKey,
+        doubleClickWindowMs: BARREL_DOUBLE_CLICK_MS,
+      });
+
+      lastBarrelTapRef.current = result.nextLastTap;
+
+      if (result.action === "toggle") {
+        cancelPendingBarrelFocus();
         onToggleBarrelExpand?.(barrelNodeId);
         return;
       }
 
-      lastBarrelTapRef.current = { id: barrelNodeId, at: now };
-      onFocusBarrel?.(barrelNodeId);
+      cancelPendingBarrelFocus();
+      pendingBarrelFocusRef.current = setTimeout(() => {
+        pendingBarrelFocusRef.current = null;
+        lastBarrelTapRef.current = null;
+        onFocusBarrel?.(barrelNodeId);
+      }, BARREL_DOUBLE_CLICK_MS);
     },
-    [onFocusBarrel, onToggleBarrelExpand],
+    [cancelPendingBarrelFocus, onFocusBarrel, onToggleBarrelExpand],
   );
 
   const finishPointer = useCallback(
@@ -353,7 +373,7 @@ export function GraphViewport({
       if (drag.kind === "node") {
         if (distance < PAN_CLICK_THRESHOLD_PX) {
           if (isBarrelNodeId(drag.moduleId)) {
-            handleBarrelClick(drag.moduleId);
+            handleBarrelClick(drag.moduleId, { altKey: event.altKey });
           } else {
             onFocusModule?.(drag.moduleId);
           }

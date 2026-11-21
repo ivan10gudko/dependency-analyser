@@ -183,9 +183,11 @@ export function GraphViewPanel() {
             label="Barrel folders"
             content={
               <>
-                The <strong>index</strong> is always shown as a folder oval. Click the oval to
-                focus (same as selecting index in the explorer); double-click toggles internal
-                modules. Deep imports stay visible (future: Problems warning).
+                The <strong>index</strong> is always shown as a folder oval. Single-click the
+                oval to focus (same as picking the index in the explorer; folder contents stay
+                collapsed). Double-click or <strong>Alt</strong>+click toggles internal modules.
+                The explorer does not expand barrels automatically. Deep imports stay visible
+                (future: Problems warning).
               </>
             }
           />

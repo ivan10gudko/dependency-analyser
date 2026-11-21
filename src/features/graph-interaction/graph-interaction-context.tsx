@@ -11,8 +11,6 @@ import {
 import {
   buildBarrelAwareFocusVisual,
   buildBarrelDisplayGraph,
-  detectBarrelFolders,
-  isModuleHiddenInBarrelView,
   resolveDisplayFocusModuleId,
   barrelFolderFromNodeId,
 } from "../barrel-view";
@@ -24,7 +22,6 @@ import {
 } from "../location-colors";
 import type { ModuleDependencyGraph } from "../graph-data/types";
 import type { ModuleFileStats } from "../project/module-file-stats";
-import { directoryOf } from "../../lib/path";
 import type { ModuleId } from "../project/types";
 
 import {
@@ -199,21 +196,9 @@ export function GraphInteractionProvider({
     moduleIds,
   ]);
 
-  const focusModule = useCallback(
-    (id: ModuleId) => {
-      if (filteredGraph && state.barrelViewEnabled) {
-        const dir = directoryOf(id);
-        const folder = detectBarrelFolders(filteredGraph).get(dir);
-        if (folder?.indexModuleId === id) {
-          dispatch({ type: "EXPAND_BARREL", directory: folder.directory });
-        } else if (isModuleHiddenInBarrelView(id, filteredGraph, barrelDisplayOptions)) {
-          dispatch({ type: "EXPAND_BARREL", directory: dir });
-        }
-      }
-      dispatch({ type: "FOCUS", id });
-    },
-    [filteredGraph, state.barrelViewEnabled, barrelDisplayOptions],
-  );
+  const focusModule = useCallback((id: ModuleId) => {
+    dispatch({ type: "FOCUS", id });
+  }, []);
 
   const clearFocus = useCallback(() => dispatch({ type: "CLEAR" }), []);
 
