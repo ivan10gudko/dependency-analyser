@@ -204,9 +204,134 @@
 
 .wb-filters {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 0.5rem;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.wb-mask-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wb-mask-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.wb-mask-field {
+  position: relative;
+}
+
+.wb-mask-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 13px;
+}
+
+.wb-mask-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  outline-offset: 1px;
+}
+
+.wb-mask-menu {
+  position: fixed;
+  z-index: 40;
+  overflow: auto;
+  padding: 0.25rem 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.wb-mask-option {
+  display: block;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  border: none;
+  background: transparent;
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-mask-option--action {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wb-mask-option:hover:not(:disabled) {
+  background: var(--color-menu-hover);
+}
+
+.wb-mask-option:disabled {
+  color: var(--color-fg-muted);
+  cursor: default;
+}
+
+.wb-mask-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.wb-mask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wb-mask-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 0.15rem;
+  padding: 0.1rem 0.15rem 0.1rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-surface);
+}
+
+.wb-mask-chip-label {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-mask-chip-remove {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+
+.wb-mask-chip-remove:hover {
+  color: var(--color-fg);
 }
 
 .wb-filters-section {

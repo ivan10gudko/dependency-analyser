@@ -39,6 +39,10 @@ export interface GraphInteractionValue {
   neighborhoodDirection: NeighborhoodDirection;
   barrelViewEnabled: boolean;
   expandedBarrelDirectories: ReadonlySet<string>;
+  showTestFiles: boolean;
+  folderMasks: readonly string[];
+  fileMasks: readonly string[];
+  moduleIds: readonly string[];
   focusVisual: GraphFocusVisual | null;
   displayGraph: ModuleDependencyGraph | null;
   dependencies: readonly ModuleLinkItem[];
@@ -51,4 +55,9 @@ export interface GraphInteractionValue {
   setNeighborhoodDirection: (direction: NeighborhoodDirection) => void;
   setBarrelViewEnabled: (enabled: boolean) => void;
   toggleBarrelExpand: (barrelNodeId: string) => void;
+  setShowTestFiles: (enabled: boolean) => void;
+  addFolderMasks: (masks: readonly string[]) => void;
+  removeFolderMask: (mask: string) => void;
+  addFileMasks: (masks: readonly string[]) => void;
+  removeFileMask: (mask: string) => void;
 }

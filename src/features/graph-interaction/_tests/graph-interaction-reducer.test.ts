@@ -13,6 +13,10 @@ const baseState = (): GraphInteractionState => ({
   neighborhoodDirection: DEFAULT_NEIGHBORHOOD_DIRECTION,
   barrelViewEnabled: false,
   expandedBarrelDirectories: new Set(),
+  showTestFiles: true,
+  projectKey: null,
+  folderMasks: [],
+  fileMasks: [],
 });
 
 describe("parseConnectivityDepth", () => {
@@ -78,5 +82,82 @@ describe("graphInteractionReducer barrel view", () => {
     expect(reset.barrelViewEnabled).toBe(true);
     expect(reset.expandedBarrelDirectories.size).toBe(0);
     expect(reset.focusedModuleId).toBeNull();
+    expect(reset.showTestFiles).toBe(true);
+  });
+});
+
+describe("graphInteractionReducer filters", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    });
+  });
+
+  it("stores masks for the open project and reloads them on reset", () => {
+    const opened = graphInteractionReducer(baseState(), {
+      type: "RESET",
+      projectKey: "/repo",
+    });
+    const withMasks = graphInteractionReducer(opened, {
+      type: "ADD_FOLDER_MASKS",
+      masks: [" src/legacy ", "src/legacy", "**/__tests__"],
+    });
+    const withFiles = graphInteractionReducer(withMasks, {
+      type: "ADD_FILE_MASKS",
+      masks: ["src/main.ts"],
+    });
+    expect(withFiles.folderMasks).toEqual(["src/legacy", "**/__tests__"]);
+    expect(withFiles.fileMasks).toEqual(["src/main.ts"]);
+
+    const otherProject = graphInteractionReducer(withFiles, {
+      type: "RESET",
+      projectKey: "/other",
+    });
+    expect(otherProject.folderMasks).toEqual([]);
+    expect(otherProject.fileMasks).toEqual([]);
+
+    const reopened = graphInteractionReducer(otherProject, {
+      type: "RESET",
+      projectKey: "/repo",
+    });
+    expect(reopened.folderMasks).toEqual(["src/legacy", "**/__tests__"]);
+    expect(reopened.fileMasks).toEqual(["src/main.ts"]);
+  });
+
+  it("removes a mask and ignores a duplicate add", () => {
+    const opened = graphInteractionReducer(
+      { ...baseState(), projectKey: "/repo" },
+      { type: "ADD_FILE_MASKS", masks: ["src/main.ts"] },
+    );
+    const duplicate = graphInteractionReducer(opened, {
+      type: "ADD_FILE_MASKS",
+      masks: ["src/main.ts"],
+    });
+    expect(duplicate).toBe(opened);
+
+    const removed = graphInteractionReducer(opened, {
+      type: "REMOVE_FILE_MASK",
+      mask: "src/main.ts",
+    });
+    expect(removed.fileMasks).toEqual([]);
+    const missing = graphInteractionReducer(removed, {
+      type: "REMOVE_FILE_MASK",
+      mask: "src/main.ts",
+    });
+    expect(missing).toBe(removed);
+  });
+
+  it("persists the test-file toggle and keeps it across projects", () => {
+    const hidden = graphInteractionReducer(baseState(), {
+      type: "SET_SHOW_TEST_FILES",
+      enabled: false,
+    });
+    expect(hidden.showTestFiles).toBe(false);
+    const reset = graphInteractionReducer(hidden, { type: "RESET", projectKey: "/repo" });
+    expect(reset.showTestFiles).toBe(false);
   });
 });

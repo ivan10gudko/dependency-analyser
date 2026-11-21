@@ -1,4 +1,5 @@
 import { readStringEnum, writeStringSetting } from "../../lib/persisted-setting";
+import { mergeMasks, normalizeMasks } from "../graph-filters";
 import type { ModuleId } from "../project/types";
 
 import {
@@ -12,6 +13,8 @@ import {
 const DEPTH_STORAGE_KEY = "dependency-analyser.graph.connectivityDepth";
 const DIRECTION_STORAGE_KEY = "dependency-analyser.graph.neighborhoodDirection";
 const BARREL_VIEW_STORAGE_KEY = "dependency-analyser.graph.barrelViewEnabled";
+const SHOW_TEST_FILES_KEY = "dependency-analyser.graph.showTestFiles";
+const FILTERS_KEY_PREFIX = "dependency-analyser.graph.filters.";
 
 export interface GraphInteractionState {
   focusedModuleId: ModuleId | null;
@@ -19,6 +22,10 @@ export interface GraphInteractionState {
   neighborhoodDirection: NeighborhoodDirection;
   barrelViewEnabled: boolean;
   expandedBarrelDirectories: Set<string>;
+  showTestFiles: boolean;
+  projectKey: string | null;
+  folderMasks: string[];
+  fileMasks: string[];
 }
 
 export type GraphInteractionAction =
@@ -29,7 +36,12 @@ export type GraphInteractionAction =
   | { type: "SET_BARREL_VIEW"; enabled: boolean }
   | { type: "TOGGLE_BARREL_EXPAND"; directory: string }
   | { type: "EXPAND_BARREL"; directory: string }
-  | { type: "RESET" };
+  | { type: "SET_SHOW_TEST_FILES"; enabled: boolean }
+  | { type: "ADD_FOLDER_MASKS"; masks: readonly string[] }
+  | { type: "REMOVE_FOLDER_MASK"; mask: string }
+  | { type: "ADD_FILE_MASKS"; masks: readonly string[] }
+  | { type: "REMOVE_FILE_MASK"; mask: string }
+  | { type: "RESET"; projectKey?: string | null };
 
 export function parseConnectivityDepth(raw: string | null): ConnectivityDepth {
   if (raw === "all") return "all";
@@ -65,6 +77,61 @@ export function loadStoredBarrelViewEnabled(): boolean {
 
 export function persistBarrelViewEnabled(enabled: boolean): void {
   writeStringSetting(BARREL_VIEW_STORAGE_KEY, String(enabled));
+}
+
+export function loadStoredShowTestFiles(): boolean {
+  const raw = localStorage.getItem(SHOW_TEST_FILES_KEY);
+  if (raw === null) return true;
+  return raw === "true";
+}
+
+export function persistShowTestFiles(enabled: boolean): void {
+  writeStringSetting(SHOW_TEST_FILES_KEY, String(enabled));
+}
+
+export function loadStoredGraphFilters(projectKey: string | null): {
+  folderMasks: string[];
+  fileMasks: string[];
+} {
+  if (!projectKey) return { folderMasks: [], fileMasks: [] };
+  try {
+    const raw = localStorage.getItem(filtersStorageKey(projectKey));
+    if (!raw) return { folderMasks: [], fileMasks: [] };
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return { folderMasks: [], fileMasks: [] };
+    const record = parsed as { folderMasks?: unknown; fileMasks?: unknown };
+    return {
+      folderMasks: normalizeMasks(stringList(record.folderMasks)),
+      fileMasks: normalizeMasks(stringList(record.fileMasks)),
+    };
+  } catch {
+    return { folderMasks: [], fileMasks: [] };
+  }
+}
+
+function persistGraphFilters(
+  projectKey: string | null,
+  folderMasks: readonly string[],
+  fileMasks: readonly string[],
+): void {
+  if (!projectKey) return;
+  writeStringSetting(
+    filtersStorageKey(projectKey),
+    JSON.stringify({ folderMasks, fileMasks }),
+  );
+}
+
+function filtersStorageKey(projectKey: string): string {
+  return `${FILTERS_KEY_PREFIX}${projectKey}`;
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function sameMasks(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((mask, index) => mask === right[index]);
 }
 
 export function graphInteractionReducer(
@@ -106,14 +173,49 @@ export function graphInteractionReducer(
       next.add(action.directory);
       return { ...state, expandedBarrelDirectories: next };
     }
-    case "RESET":
+    case "SET_SHOW_TEST_FILES":
+      if (state.showTestFiles === action.enabled) return state;
+      persistShowTestFiles(action.enabled);
+      return { ...state, showTestFiles: action.enabled };
+    case "ADD_FOLDER_MASKS": {
+      const folderMasks = mergeMasks(state.folderMasks, action.masks);
+      if (sameMasks(state.folderMasks, folderMasks)) return state;
+      persistGraphFilters(state.projectKey, folderMasks, state.fileMasks);
+      return { ...state, folderMasks };
+    }
+    case "REMOVE_FOLDER_MASK": {
+      if (!state.folderMasks.includes(action.mask)) return state;
+      const folderMasks = state.folderMasks.filter((mask) => mask !== action.mask);
+      persistGraphFilters(state.projectKey, folderMasks, state.fileMasks);
+      return { ...state, folderMasks };
+    }
+    case "ADD_FILE_MASKS": {
+      const fileMasks = mergeMasks(state.fileMasks, action.masks);
+      if (sameMasks(state.fileMasks, fileMasks)) return state;
+      persistGraphFilters(state.projectKey, state.folderMasks, fileMasks);
+      return { ...state, fileMasks };
+    }
+    case "REMOVE_FILE_MASK": {
+      if (!state.fileMasks.includes(action.mask)) return state;
+      const fileMasks = state.fileMasks.filter((mask) => mask !== action.mask);
+      persistGraphFilters(state.projectKey, state.folderMasks, fileMasks);
+      return { ...state, fileMasks };
+    }
+    case "RESET": {
+      const projectKey = action.projectKey ?? null;
+      const filters = loadStoredGraphFilters(projectKey);
       return {
         focusedModuleId: null,
         connectivityDepth: state.connectivityDepth,
         neighborhoodDirection: state.neighborhoodDirection,
         barrelViewEnabled: state.barrelViewEnabled,
         expandedBarrelDirectories: new Set(),
+        showTestFiles: state.showTestFiles,
+        projectKey,
+        folderMasks: filters.folderMasks,
+        fileMasks: filters.fileMasks,
       };
+    }
     default:
       return state;
   }
@@ -126,5 +228,9 @@ export function createInitialGraphInteractionState(): GraphInteractionState {
     neighborhoodDirection: loadStoredNeighborhoodDirection(),
     barrelViewEnabled: loadStoredBarrelViewEnabled(),
     expandedBarrelDirectories: new Set(),
+    showTestFiles: loadStoredShowTestFiles(),
+    projectKey: null,
+    folderMasks: [],
+    fileMasks: [],
   };
 }

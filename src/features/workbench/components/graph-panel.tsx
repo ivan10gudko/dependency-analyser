@@ -28,22 +28,27 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
     focusVisual,
     focusModule,
     clearFocus,
-    barrelViewEnabled,
     displayGraph,
     toggleBarrelExpand,
     expandedBarrelDirectories,
   } = useGraphInteraction();
 
+  const filtersHidEverything =
+    (workspace.dependencyGraph?.nodes.size ?? 0) > 0 &&
+    displayGraph != null &&
+    displayGraph.nodes.size === 0;
+
   const graphLayout = useMemo(() => {
     const base = workspace.layoutModel;
     if (!base) return null;
-    if (!barrelViewEnabled || !displayGraph) return base;
+    if (!displayGraph || displayGraph === workspace.dependencyGraph) return base;
+    if (displayGraph.nodes.size === 0) return null;
     try {
       return buildHierarchicalLayout(displayGraph).model;
     } catch {
       return base;
     }
-  }, [workspace.layoutModel, barrelViewEnabled, displayGraph]);
+  }, [workspace.layoutModel, workspace.dependencyGraph, displayGraph]);
 
   const layoutFocusVisual = useMemo(
     () => enrichFocusVisualForLayout(focusVisual, graphLayout),
@@ -94,6 +99,15 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
             onAction={
               workspace.error ? () => void workspace.openProject() : undefined
             }
+          />
+        </div>
+      )}
+
+      {showLayout && filtersHidEverything && (
+        <div className="wb-graph-center">
+          <EmptyState
+            title="Nothing to show"
+            description="All modules are hidden by the current filters."
           />
         </div>
       )}

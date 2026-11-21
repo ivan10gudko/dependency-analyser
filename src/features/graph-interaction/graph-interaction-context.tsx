@@ -16,6 +16,7 @@ import {
   resolveDisplayFocusModuleId,
   barrelFolderFromNodeId,
 } from "../barrel-view";
+import { excludeModules } from "../graph-filters";
 import type { ModuleDependencyGraph } from "../graph-data/types";
 import type { ModuleFileStats } from "../project/module-file-stats";
 import { directoryOf } from "../../lib/path";
@@ -56,7 +57,7 @@ export function GraphInteractionProvider({
   );
 
   useEffect(() => {
-    dispatch({ type: "RESET" });
+    dispatch({ type: "RESET", projectKey });
   }, [projectKey]);
 
   const barrelDisplayOptions = useMemo(
@@ -67,39 +68,55 @@ export function GraphInteractionProvider({
     [state.barrelViewEnabled, state.expandedBarrelDirectories],
   );
 
-  const displayGraph = useMemo<ModuleDependencyGraph | null>(() => {
+  const filteredGraph = useMemo<ModuleDependencyGraph | null>(() => {
     if (!dependencyGraph) return null;
-    return buildBarrelDisplayGraph(dependencyGraph, barrelDisplayOptions);
-  }, [dependencyGraph, barrelDisplayOptions]);
+    return excludeModules(dependencyGraph, {
+      showTestFiles: state.showTestFiles,
+      folderMasks: state.folderMasks,
+      fileMasks: state.fileMasks,
+    });
+  }, [dependencyGraph, state.showTestFiles, state.folderMasks, state.fileMasks]);
+
+  const displayGraph = useMemo<ModuleDependencyGraph | null>(() => {
+    if (!filteredGraph) return null;
+    return buildBarrelDisplayGraph(filteredGraph, barrelDisplayOptions);
+  }, [filteredGraph, barrelDisplayOptions]);
+
+  const focusedModuleIsVisible =
+    filteredGraph != null &&
+    state.focusedModuleId != null &&
+    filteredGraph.nodes.has(state.focusedModuleId);
 
   const displayFocusModuleId = useMemo(() => {
-    if (!dependencyGraph || state.focusedModuleId === null) return null;
+    if (!filteredGraph || state.focusedModuleId === null || !focusedModuleIsVisible) return null;
     return resolveDisplayFocusModuleId(
       state.focusedModuleId,
-      dependencyGraph,
+      filteredGraph,
       barrelDisplayOptions,
     );
-  }, [dependencyGraph, state.focusedModuleId, barrelDisplayOptions]);
+  }, [filteredGraph, state.focusedModuleId, focusedModuleIsVisible, barrelDisplayOptions]);
 
-  const focusVisual = useMemo(
-    () =>
-      buildBarrelAwareFocusVisual(
-        dependencyGraph,
-        displayGraph,
-        state.focusedModuleId,
-        barrelDisplayOptions,
-        state.connectivityDepth,
-        state.neighborhoodDirection,
-      ),
-    [
-      dependencyGraph,
+  const focusVisual = useMemo(() => {
+    if (!filteredGraph || !displayGraph || state.focusedModuleId === null || !focusedModuleIsVisible) {
+      return null;
+    }
+    return buildBarrelAwareFocusVisual(
+      filteredGraph,
       displayGraph,
       state.focusedModuleId,
       barrelDisplayOptions,
       state.connectivityDepth,
       state.neighborhoodDirection,
-    ],
-  );
+    );
+  }, [
+    filteredGraph,
+    displayGraph,
+    state.focusedModuleId,
+    focusedModuleIsVisible,
+    barrelDisplayOptions,
+    state.connectivityDepth,
+    state.neighborhoodDirection,
+  ]);
 
   const { dependencies, dependents } = useMemo(() => {
     if (!dependencyGraph || state.focusedModuleId === null) {
@@ -108,20 +125,28 @@ export function GraphInteractionProvider({
     return linkListsForModule(dependencyGraph, state.focusedModuleId);
   }, [dependencyGraph, state.focusedModuleId]);
 
+  const moduleIds = useMemo(
+    () =>
+      dependencyGraph
+        ? [...dependencyGraph.nodes.keys()].sort((left, right) => left.localeCompare(right))
+        : [],
+    [dependencyGraph],
+  );
+
   const focusModule = useCallback(
     (id: ModuleId) => {
-      if (dependencyGraph && state.barrelViewEnabled) {
+      if (filteredGraph && state.barrelViewEnabled) {
         const dir = directoryOf(id);
-        const folder = detectBarrelFolders(dependencyGraph).get(dir);
+        const folder = detectBarrelFolders(filteredGraph).get(dir);
         if (folder?.indexModuleId === id) {
           dispatch({ type: "EXPAND_BARREL", directory: folder.directory });
-        } else if (isModuleHiddenInBarrelView(id, dependencyGraph, barrelDisplayOptions)) {
+        } else if (isModuleHiddenInBarrelView(id, filteredGraph, barrelDisplayOptions)) {
           dispatch({ type: "EXPAND_BARREL", directory: dir });
         }
       }
       dispatch({ type: "FOCUS", id });
     },
-    [dependencyGraph, state.barrelViewEnabled, barrelDisplayOptions],
+    [filteredGraph, state.barrelViewEnabled, barrelDisplayOptions],
   );
 
   const clearFocus = useCallback(() => dispatch({ type: "CLEAR" }), []);
@@ -147,6 +172,31 @@ export function GraphInteractionProvider({
     dispatch({ type: "TOGGLE_BARREL_EXPAND", directory });
   }, []);
 
+  const setShowTestFiles = useCallback(
+    (enabled: boolean) => dispatch({ type: "SET_SHOW_TEST_FILES", enabled }),
+    [],
+  );
+
+  const addFolderMasks = useCallback(
+    (masks: readonly string[]) => dispatch({ type: "ADD_FOLDER_MASKS", masks }),
+    [],
+  );
+
+  const removeFolderMask = useCallback(
+    (mask: string) => dispatch({ type: "REMOVE_FOLDER_MASK", mask }),
+    [],
+  );
+
+  const addFileMasks = useCallback(
+    (masks: readonly string[]) => dispatch({ type: "ADD_FILE_MASKS", masks }),
+    [],
+  );
+
+  const removeFileMask = useCallback(
+    (mask: string) => dispatch({ type: "REMOVE_FILE_MASK", mask }),
+    [],
+  );
+
   const value = useMemo<GraphInteractionValue>(
     () => ({
       focusedModuleId: state.focusedModuleId,
@@ -155,6 +205,10 @@ export function GraphInteractionProvider({
       neighborhoodDirection: state.neighborhoodDirection,
       barrelViewEnabled: state.barrelViewEnabled,
       expandedBarrelDirectories: state.expandedBarrelDirectories,
+      showTestFiles: state.showTestFiles,
+      folderMasks: state.folderMasks,
+      fileMasks: state.fileMasks,
+      moduleIds,
       focusVisual,
       displayGraph,
       dependencies,
@@ -167,6 +221,11 @@ export function GraphInteractionProvider({
       setNeighborhoodDirection,
       setBarrelViewEnabled,
       toggleBarrelExpand,
+      setShowTestFiles,
+      addFolderMasks,
+      removeFolderMask,
+      addFileMasks,
+      removeFileMask,
     }),
     [
       state.focusedModuleId,
@@ -175,6 +234,10 @@ export function GraphInteractionProvider({
       state.neighborhoodDirection,
       state.barrelViewEnabled,
       state.expandedBarrelDirectories,
+      state.showTestFiles,
+      state.folderMasks,
+      state.fileMasks,
+      moduleIds,
       focusVisual,
       displayGraph,
       dependencies,
@@ -187,6 +250,11 @@ export function GraphInteractionProvider({
       setNeighborhoodDirection,
       setBarrelViewEnabled,
       toggleBarrelExpand,
+      setShowTestFiles,
+      addFolderMasks,
+      removeFolderMask,
+      addFileMasks,
+      removeFileMask,
     ],
   );
 
