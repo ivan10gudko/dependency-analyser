@@ -1,4 +1,4 @@
-import { useMemo, type PointerEvent as ReactPointerEvent } from "react";
+import { forwardRef, memo, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 
 import { barrelFolderFromNodeId } from "../../barrel-view";
 import type {
@@ -29,16 +29,20 @@ export interface GraphRendererProps {
   onNodePointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
 }
 
-export function GraphRenderer({
-  layout,
-  padding,
-  viewBox: viewBoxProp,
-  fillContainer = false,
-  focusVisual = null,
-  locationColorByModuleId = null,
-  expandedBarrelDirectories,
-  onNodePointerDown,
-}: GraphRendererProps) {
+export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
+  function GraphRenderer(
+    {
+      layout,
+      padding,
+      viewBox: viewBoxProp,
+      fillContainer = false,
+      focusVisual = null,
+      locationColorByModuleId = null,
+      expandedBarrelDirectories,
+      onNodePointerDown,
+    },
+    ref,
+  ) {
   const bounds = useMemo(
     () => computeLayoutBounds(layout.nodes, padding),
     [layout.nodes, padding],
@@ -74,6 +78,7 @@ export function GraphRenderer({
 
   return (
     <svg
+      ref={ref}
       className="dependency-graph"
       width={width}
       height={height}
@@ -138,7 +143,7 @@ export function GraphRenderer({
       </g>
     </svg>
   );
-}
+}));
 
 function resolveNodeVisualState(
   focusVisual: GraphFocusVisual | null | undefined,

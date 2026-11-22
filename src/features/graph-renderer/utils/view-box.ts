@@ -1,8 +1,25 @@
+import { DEFAULT_MODULE_NODE_SIZE } from "../../hierarchical-graph-layout";
+
 export interface ViewBoxRect {
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+export const GRAPH_DETAIL_MIN_NODE_PX = 40;
+
+export type GraphDetailLevel = "full" | "overview";
+
+export function graphDetailLevel(
+  viewBoxWidth: number,
+  viewportClientWidth: number,
+  nodeWidth = DEFAULT_MODULE_NODE_SIZE.width,
+  minNodePx = GRAPH_DETAIL_MIN_NODE_PX,
+): GraphDetailLevel {
+  if (!(viewBoxWidth > 0) || !(viewportClientWidth > 0)) return "full";
+  const nodePx = (nodeWidth / viewBoxWidth) * viewportClientWidth;
+  return nodePx >= minNodePx ? "full" : "overview";
 }
 
 export function parseViewBox(viewBox: string): ViewBoxRect {

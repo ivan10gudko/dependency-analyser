@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_MODULE_NODE_SIZE } from "../../hierarchical-graph-layout";
 import {
   clampViewBoxZoom,
   formatViewBox,
+  GRAPH_DETAIL_MIN_NODE_PX,
+  graphDetailLevel,
   MIN_VIEW_BOX_WIDTH,
   MIN_VIEW_WIDTH_RATIO,
   parseViewBox,
@@ -53,6 +56,26 @@ describe("clampViewBoxZoom", () => {
     const base = center;
     const rect = { x: 100, y: 50, width: 400, height: 200 };
     expect(clampViewBoxZoom(rect, base)).toEqual(rect);
+  });
+});
+
+describe("graphDetailLevel", () => {
+  const nodeWidth = DEFAULT_MODULE_NODE_SIZE.width;
+  const viewportWidth = 1000;
+  const fullWidth = (nodeWidth / GRAPH_DETAIL_MIN_NODE_PX) * viewportWidth;
+
+  it("shows labels when a module is at least the minimum screen size", () => {
+    expect(graphDetailLevel(fullWidth, viewportWidth)).toBe("full");
+    expect(graphDetailLevel(fullWidth / 2, viewportWidth)).toBe("full");
+  });
+
+  it("hides labels and markers when modules are smaller than the minimum", () => {
+    expect(graphDetailLevel(fullWidth + 1, viewportWidth)).toBe("overview");
+  });
+
+  it("keeps detail until the viewport has a size", () => {
+    expect(graphDetailLevel(fullWidth, 0)).toBe("full");
+    expect(graphDetailLevel(0, viewportWidth)).toBe("full");
   });
 });
 

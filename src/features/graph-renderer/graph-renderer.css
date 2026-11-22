@@ -47,6 +47,12 @@
   cursor: grabbing;
 }
 
+.graph-viewport.is-panning .dependency-graph,
+.graph-viewport.is-dragging-node .dependency-graph,
+.graph-viewport.is-wheeling .dependency-graph {
+  pointer-events: none;
+}
+
 .dependency-graph {
   display: block;
   width: 100%;
@@ -69,12 +75,10 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.45;
-  transition: opacity 0.12s ease, stroke-width 0.12s ease;
 }
 
 .graph-edge:hover {
   opacity: 1;
-  stroke-width: 1.5;
   stroke: var(--color-graph-edge-hover);
 }
 
@@ -82,14 +86,16 @@
   fill: var(--color-graph-edge);
 }
 
-.graph-edge:hover + .graph-edge-marker,
-.dependency-graph:has(.graph-edge:hover) .graph-edge-marker path {
-  fill: var(--color-graph-edge-hover);
+.graph-node {
+  cursor: grab;
 }
 
-.graph-node {
-  transition: filter 0.12s ease, opacity 0.12s ease;
-  cursor: grab;
+.dependency-graph[data-detail="overview"] .graph-node-label {
+  display: none;
+}
+
+.dependency-graph[data-detail="overview"] .graph-edge {
+  marker-end: none;
 }
 
 .graph-node:hover {
@@ -145,10 +151,6 @@
   opacity: 1;
   stroke: var(--color-graph-edge-highlight);
   stroke-width: 1.75;
-}
-
-.graph-edge--highlighted:hover {
-  stroke-width: 2;
 }
 
 .graph-node-label {

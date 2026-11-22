@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -30,6 +31,7 @@ import {
   clampViewBoxZoom,
   easeInOutCubic,
   formatViewBox,
+  graphDetailLevel,
   lerpViewBox,
   panViewBoxByPixels,
   parseViewBox,
@@ -45,6 +47,7 @@ const FOCUS_REVEAL_OUT_MS = 720;
 const FOCUS_REVEAL_HOLD_MS = 650;
 const FOCUS_REVEAL_IN_MS = 360;
 const PAN_CLICK_THRESHOLD_PX = 4;
+const WHEEL_GESTURE_IDLE_MS = 150;
 const EMPTY_NODE_OFFSETS: ReadonlyMap<string, NodeOffset> = new Map();
 
 interface PanDragState {
@@ -94,21 +97,28 @@ export function GraphViewport({
   expandedBarrelDirectories,
 }: GraphViewportProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<ViewportDragState | null>(null);
   const lastFramedFocusRef = useRef<string | null>(null);
   const lastBarrelTapRef = useRef<{ id: string; at: number } | null>(null);
   const pendingBarrelFocusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusFrameAnimationRef = useRef<number | null>(null);
   const focusRevealHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewFrameRef = useRef<number | null>(null);
+  const wheelIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const baseViewBox = useMemo(() => {
     const bounds = computeLayoutBounds(layout.nodes, padding);
     return parseViewBox(bounds.viewBox);
   }, [layout.nodes, padding]);
 
-  const [viewBox, setViewBox] = useState<ViewBoxRect>(baseViewBox);
-  const viewBoxRef = useRef(viewBox);
-  viewBoxRef.current = viewBox;
+  const viewBoxRef = useRef(baseViewBox);
+  const seenBaseRef = useRef(baseViewBox);
+  if (seenBaseRef.current !== baseViewBox) {
+    seenBaseRef.current = baseViewBox;
+    viewBoxRef.current = baseViewBox;
+    lastFramedFocusRef.current = null;
+  }
 
   const [offsetState, setOffsetState] = useState<{
     layout: LayoutRenderModel;
@@ -126,10 +136,41 @@ export function GraphViewport({
     return { ...layout, nodes: [...nodes] };
   }, [activeOffsets, layout]);
 
-  useEffect(() => {
-    setViewBox(baseViewBox);
-    lastFramedFocusRef.current = null;
-  }, [baseViewBox]);
+  const writeViewBoxDom = useCallback(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    svg.setAttribute("viewBox", formatViewBox(viewBoxRef.current));
+
+    const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    const detail = graphDetailLevel(viewBoxRef.current.width, viewportWidth);
+    if (svg.getAttribute("data-detail") === detail) return;
+    svg.setAttribute("data-detail", detail);
+  }, []);
+
+  const scheduleViewBox = useCallback(
+    (next: ViewBoxRect) => {
+      viewBoxRef.current = next;
+      if (viewFrameRef.current !== null) return;
+      viewFrameRef.current = requestAnimationFrame(() => {
+        viewFrameRef.current = null;
+        writeViewBoxDom();
+      });
+    },
+    [writeViewBoxDom],
+  );
+
+  const applyViewBoxNow = useCallback(
+    (next: ViewBoxRect) => {
+      viewBoxRef.current = next;
+      if (viewFrameRef.current !== null) {
+        cancelAnimationFrame(viewFrameRef.current);
+        viewFrameRef.current = null;
+      }
+      writeViewBoxDom();
+    },
+    [writeViewBoxDom],
+  );
 
   const clampZoom = useCallback(
     (rect: ViewBoxRect): ViewBoxRect => clampViewBoxZoom(rect, baseViewBox),
@@ -153,11 +194,11 @@ export function GraphViewport({
 
       const step = (now: number) => {
         const t = easeInOutCubic((now - start) / durationMs);
-        setViewBox(lerpViewBox(from, to, t));
         if (t < 1) {
+          applyViewBoxNow(lerpViewBox(from, to, t));
           focusFrameAnimationRef.current = requestAnimationFrame(step);
         } else {
-          setViewBox(to);
+          applyViewBoxNow(to);
           focusFrameAnimationRef.current = null;
           onDone?.();
         }
@@ -165,7 +206,7 @@ export function GraphViewport({
 
       focusFrameAnimationRef.current = requestAnimationFrame(step);
     },
-    [],
+    [applyViewBoxNow],
   );
 
   const runFocusFramePlan = useCallback(
@@ -187,12 +228,43 @@ export function GraphViewport({
     [animateViewBoxBetween, cancelFocusFrameAnimation],
   );
 
+  useLayoutEffect(() => {
+    writeViewBoxDom();
+  });
+
+  useEffect(() => {
+    const host = viewportRef.current;
+    if (!host) return;
+    const observer = new ResizeObserver(() => {
+      writeViewBoxDom();
+    });
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, [writeViewBoxDom]);
+
   useEffect(
     () => () => {
       cancelFocusFrameAnimation();
+      if (viewFrameRef.current !== null) {
+        cancelAnimationFrame(viewFrameRef.current);
+        viewFrameRef.current = null;
+      }
+      if (wheelIdleTimerRef.current !== null) {
+        clearTimeout(wheelIdleTimerRef.current);
+        wheelIdleTimerRef.current = null;
+      }
     },
     [cancelFocusFrameAnimation],
   );
+
+  const markWheeling = useCallback(() => {
+    viewportRef.current?.classList.add("is-wheeling");
+    if (wheelIdleTimerRef.current !== null) clearTimeout(wheelIdleTimerRef.current);
+    wheelIdleTimerRef.current = setTimeout(() => {
+      wheelIdleTimerRef.current = null;
+      viewportRef.current?.classList.remove("is-wheeling");
+    }, WHEEL_GESTURE_IDLE_MS);
+  }, []);
 
   useEffect(() => {
     if (focusedModuleId === null) {
@@ -235,52 +307,61 @@ export function GraphViewport({
   const onWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
       event.preventDefault();
+      cancelFocusFrameAnimation();
       const bounds = viewportRef.current?.getBoundingClientRect();
       if (!bounds) return;
 
-      setViewBox((current) => {
-        const factor = wheelZoomScaleFactor(event.deltaY, event.deltaMode);
-        const focus = screenToViewPoint(current, event.clientX, event.clientY, bounds);
-        return clampZoom(zoomViewBoxAt(current, factor, focus.x, focus.y));
-      });
+      const current = viewBoxRef.current;
+      const factor = wheelZoomScaleFactor(event.deltaY, event.deltaMode);
+      const focus = screenToViewPoint(current, event.clientX, event.clientY, bounds);
+      scheduleViewBox(clampZoom(zoomViewBoxAt(current, factor, focus.x, focus.y)));
+      markWheeling();
     },
-    [clampZoom],
+    [cancelFocusFrameAnimation, clampZoom, markWheeling, scheduleViewBox],
   );
 
-  const onPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    window.getSelection()?.removeAllRanges();
-    viewportRef.current?.setPointerCapture(event.pointerId);
-    dragRef.current = {
-      kind: "pan",
-      startX: event.clientX,
-      startY: event.clientY,
-      x: event.clientX,
-      y: event.clientY,
-      pointerId: event.pointerId,
-    };
-    event.currentTarget.classList.add("is-panning");
-  }, []);
+  const onPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      cancelFocusFrameAnimation();
+      window.getSelection()?.removeAllRanges();
+      viewportRef.current?.setPointerCapture(event.pointerId);
+      dragRef.current = {
+        kind: "pan",
+        startX: event.clientX,
+        startY: event.clientY,
+        x: event.clientX,
+        y: event.clientY,
+        pointerId: event.pointerId,
+      };
+      event.currentTarget.classList.add("is-panning");
+    },
+    [cancelFocusFrameAnimation],
+  );
 
-  const onNodePointerDown = useCallback((event: ReactPointerEvent<SVGGElement>) => {
-    const moduleId = event.currentTarget.dataset.moduleId;
-    if (!moduleId) return;
+  const onNodePointerDown = useCallback(
+    (event: ReactPointerEvent<SVGGElement>) => {
+      const moduleId = event.currentTarget.dataset.moduleId;
+      if (!moduleId) return;
 
-    event.preventDefault();
-    window.getSelection()?.removeAllRanges();
-    viewportRef.current?.setPointerCapture(event.pointerId);
-    dragRef.current = {
-      kind: "node",
-      moduleId,
-      startX: event.clientX,
-      startY: event.clientY,
-      x: event.clientX,
-      y: event.clientY,
-      pointerId: event.pointerId,
-    };
-    viewportRef.current?.classList.add("is-dragging-node");
-  }, []);
+      event.preventDefault();
+      cancelFocusFrameAnimation();
+      window.getSelection()?.removeAllRanges();
+      viewportRef.current?.setPointerCapture(event.pointerId);
+      dragRef.current = {
+        kind: "node",
+        moduleId,
+        startX: event.clientX,
+        startY: event.clientY,
+        x: event.clientX,
+        y: event.clientY,
+        pointerId: event.pointerId,
+      };
+      viewportRef.current?.classList.add("is-dragging-node");
+    },
+    [cancelFocusFrameAnimation],
+  );
 
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
@@ -316,10 +397,10 @@ export function GraphViewport({
       return;
     }
 
-    setViewBox((current) =>
-      panViewBoxByPixels(current, deltaX, deltaY, bounds.width, bounds.height),
+    scheduleViewBox(
+      panViewBoxByPixels(viewBoxRef.current, deltaX, deltaY, bounds.width, bounds.height),
     );
-  }, []);
+  }, [scheduleViewBox]);
 
   const cancelPendingBarrelFocus = useCallback(() => {
     if (pendingBarrelFocusRef.current === null) return;
@@ -394,19 +475,20 @@ export function GraphViewport({
 
   const zoomBy = useCallback(
     (factor: number) => {
-      setViewBox((current) => {
-        const focusX = current.x + current.width / 2;
-        const focusY = current.y + current.height / 2;
-        return clampZoom(zoomViewBoxAt(current, factor, focusX, focusY));
-      });
+      cancelFocusFrameAnimation();
+      const current = viewBoxRef.current;
+      const focusX = current.x + current.width / 2;
+      const focusY = current.y + current.height / 2;
+      scheduleViewBox(clampZoom(zoomViewBoxAt(current, factor, focusX, focusY)));
     },
-    [clampZoom],
+    [cancelFocusFrameAnimation, clampZoom, scheduleViewBox],
   );
 
   const resetView = useCallback(() => {
-    setViewBox(baseViewBox);
+    cancelFocusFrameAnimation();
+    applyViewBoxNow(baseViewBox);
     setOffsetState({ layout, offsets: EMPTY_NODE_OFFSETS });
-  }, [baseViewBox, layout]);
+  }, [applyViewBoxNow, baseViewBox, cancelFocusFrameAnimation, layout]);
 
   return (
     <div className="graph-viewport-shell">
@@ -451,9 +533,10 @@ export function GraphViewport({
         onDragStart={(event) => event.preventDefault()}
       >
         <GraphRenderer
+          ref={svgRef}
           layout={displayLayout}
           padding={padding}
-          viewBox={formatViewBox(viewBox)}
+          viewBox={formatViewBox(baseViewBox)}
           fillContainer
           focusVisual={focusVisual}
           locationColorByModuleId={locationColorByModuleId}

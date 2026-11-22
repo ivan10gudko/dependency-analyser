@@ -21,13 +21,29 @@ export function buildEdgeRoutingProfiles(
   const incoming = new Map<string, LogicalEdge[]>();
 
   for (const edge of edges) {
-    const out = outgoing.get(edge.from) ?? [];
-    out.push(edge);
-    outgoing.set(edge.from, out);
+    const out = outgoing.get(edge.from);
+    if (out) out.push(edge);
+    else outgoing.set(edge.from, [edge]);
 
-    const inn = incoming.get(edge.to) ?? [];
-    inn.push(edge);
-    incoming.set(edge.to, inn);
+    const inn = incoming.get(edge.to);
+    if (inn) inn.push(edge);
+    else incoming.set(edge.to, [edge]);
+  }
+
+  for (const group of outgoing.values()) {
+    group.sort((left, right) => compareEdgesByTargetX(left, right, nodeById));
+  }
+  for (const group of incoming.values()) {
+    group.sort((left, right) => compareEdgesBySourceX(left, right, nodeById));
+  }
+
+  const outgoingIndex = new Map<string, number>();
+  for (const group of outgoing.values()) {
+    group.forEach((edge, index) => outgoingIndex.set(edgeKey(edge), index));
+  }
+  const incomingIndex = new Map<string, number>();
+  for (const group of incoming.values()) {
+    group.forEach((edge, index) => incomingIndex.set(edgeKey(edge), index));
   }
 
   const profiles = new Map<string, EdgeRoutingProfile>();
@@ -38,15 +54,10 @@ export function buildEdgeRoutingProfiles(
     const toNode = nodeById.get(edge.to);
     if (!fromNode || !toNode) continue;
 
-    const outs = [...(outgoing.get(edge.from) ?? [])].sort((a, b) =>
-      compareEdgesByTargetX(a, b, nodeById),
-    );
-    const ins = [...(incoming.get(edge.to) ?? [])].sort((a, b) =>
-      compareEdgesBySourceX(a, b, nodeById),
-    );
-
-    const outIndex = Math.max(outs.findIndex((item) => edgeKey(item) === key), 0);
-    const inIndex = Math.max(ins.findIndex((item) => edgeKey(item) === key), 0);
+    const outs = outgoing.get(edge.from) ?? [];
+    const ins = incoming.get(edge.to) ?? [];
+    const outIndex = outgoingIndex.get(key) ?? 0;
+    const inIndex = incomingIndex.get(key) ?? 0;
 
     const lateralBias =
       (outIndex - (outs.length - 1) / 2) * LATERAL_BIAS_STEP +
