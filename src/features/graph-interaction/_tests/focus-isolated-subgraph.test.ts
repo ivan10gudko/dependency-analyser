@@ -101,7 +101,7 @@ describe("buildIsolatedFocusVisual", () => {
     moduleOf("src/b.ts", []),
   ]);
 
-  it("marks focus, related nodes, and highlights all subgraph edges", () => {
+  it("marks focus, descendants, and descendant edges", () => {
     const sub = buildFocusIsolatedSubgraph(
       graph,
       graph,
@@ -112,8 +112,8 @@ describe("buildIsolatedFocusVisual", () => {
     );
     const visual = buildIsolatedFocusVisual(sub, "src/a.ts");
     expect(visual?.nodeStateById.get("src/a.ts")).toBe("focus");
-    expect(visual?.nodeStateById.get("src/b.ts")).toBe("related");
-    expect(visual?.edgeStateByKey.get("src/a.ts\u2192src/b.ts")).toBe("highlighted");
+    expect(visual?.nodeStateById.get("src/b.ts")).toBe("descendant");
+    expect(visual?.edgeStateByKey.get("src/a.ts\u2192src/b.ts")).toBe("descendant");
   });
 });
 

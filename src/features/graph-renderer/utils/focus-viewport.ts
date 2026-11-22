@@ -1,4 +1,7 @@
-import type { GraphFocusVisual } from "../../graph-interaction";
+import {
+  isHighlightedNodeState,
+  type GraphFocusVisual,
+} from "../../graph-interaction/types";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
 import { computeLayoutBounds } from "./layout-bounds";
@@ -11,7 +14,7 @@ export function collectHighlightedModuleIds(
 
   const ids = new Set<string>();
   for (const [id, state] of focusVisual.nodeStateById) {
-    if (state === "focus" || state === "related") ids.add(id);
+    if (isHighlightedNodeState(state)) ids.add(id);
   }
   return ids;
 }

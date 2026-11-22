@@ -23,6 +23,38 @@
   color: var(--color-fg);
 }
 
+.graph-focus-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.graph-focus-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.graph-focus-legend-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  border: 1.5px solid transparent;
+}
+
+.graph-focus-legend-swatch--descendant {
+  background: var(--color-graph-node-descendant-fill);
+  border-color: var(--color-graph-node-descendant-stroke);
+}
+
+.graph-focus-legend-swatch--ancestor {
+  background: var(--color-graph-node-ancestor-fill);
+  border-color: var(--color-graph-node-ancestor-stroke);
+}
+
 .graph-viewport-hint {
   margin-left: auto;
   font-size: 0.8rem;
@@ -86,6 +118,18 @@
   fill: var(--color-graph-edge);
 }
 
+.graph-edge-marker--descendant path {
+  fill: var(--color-graph-edge-descendant);
+}
+
+.graph-edge-marker--ancestor path {
+  fill: var(--color-graph-edge-ancestor);
+}
+
+.graph-edge-marker--highlighted path {
+  fill: var(--color-graph-edge-highlight);
+}
+
 .graph-node {
   cursor: grab;
 }
@@ -110,13 +154,25 @@
   opacity: 0.42;
 }
 
-.graph-node--related .graph-node-box {
-  fill: var(--color-graph-node-related-fill);
-  stroke: color-mix(in srgb, var(--color-accent) 65%, var(--color-graph-node-stroke));
+.graph-node--emphasized.graph-node--descendant .graph-node-box {
+  fill: var(--color-graph-node-descendant-fill);
+  stroke: var(--color-graph-node-descendant-stroke);
   stroke-width: 1.5;
 }
 
-.graph-node--focus .graph-node-box {
+.graph-node--emphasized.graph-node--ancestor .graph-node-box {
+  fill: var(--color-graph-node-ancestor-fill);
+  stroke: var(--color-graph-node-ancestor-stroke);
+  stroke-width: 1.5;
+}
+
+.graph-node--emphasized.graph-node--related .graph-node-box {
+  fill: var(--color-graph-node-related-fill);
+  stroke: var(--color-graph-node-related-stroke);
+  stroke-width: 1.5;
+}
+
+.graph-node--emphasized.graph-node--focus .graph-node-box {
   fill: var(--color-graph-node-focus-fill);
   stroke: var(--color-graph-node-focus-stroke);
   stroke-width: 2;
@@ -147,10 +203,34 @@
   opacity: 0.35;
 }
 
+.graph-edge--descendant {
+  opacity: 1;
+  stroke: var(--color-graph-edge-descendant);
+  stroke-width: 1.75;
+}
+
+.graph-edge--ancestor {
+  opacity: 1;
+  stroke: var(--color-graph-edge-ancestor);
+  stroke-width: 1.75;
+}
+
 .graph-edge--highlighted {
   opacity: 1;
   stroke: var(--color-graph-edge-highlight);
   stroke-width: 1.75;
+}
+
+.graph-edge--descendant:hover {
+  stroke: var(--color-graph-edge-descendant);
+}
+
+.graph-edge--ancestor:hover {
+  stroke: var(--color-graph-edge-ancestor);
+}
+
+.graph-edge--highlighted:hover {
+  stroke: var(--color-graph-edge-highlight);
 }
 
 .graph-node-label {
@@ -161,84 +241,84 @@
   user-select: none;
 }
 
-.graph-node[data-zone="green"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="green"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-green-fill);
   stroke: var(--graph-zone-green-stroke);
 }
-.graph-node[data-zone="blue"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="blue"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-blue-fill);
   stroke: var(--graph-zone-blue-stroke);
 }
-.graph-node[data-zone="purple"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="purple"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-purple-fill);
   stroke: var(--graph-zone-purple-stroke);
 }
-.graph-node[data-zone="amber"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="amber"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-amber-fill);
   stroke: var(--graph-zone-amber-stroke);
 }
-.graph-node[data-zone="rose"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="rose"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-rose-fill);
   stroke: var(--graph-zone-rose-stroke);
 }
-.graph-node[data-zone="teal"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="teal"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-teal-fill);
   stroke: var(--graph-zone-teal-stroke);
 }
-.graph-node[data-zone="indigo"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="indigo"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-indigo-fill);
   stroke: var(--graph-zone-indigo-stroke);
 }
-.graph-node[data-zone="slate"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="slate"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-slate-fill);
   stroke: var(--graph-zone-slate-stroke);
 }
-.graph-node[data-zone="orange"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="orange"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-orange-fill);
   stroke: var(--graph-zone-orange-stroke);
 }
-.graph-node[data-zone="cyan"]:not(.graph-node--focus):not(.graph-node--related) .graph-node-box {
+.graph-node[data-zone="cyan"]:not(.graph-node--emphasized) .graph-node-box {
   fill: var(--graph-zone-cyan-fill);
   stroke: var(--graph-zone-cyan-stroke);
 }
 
-.graph-edge[data-zone="green"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="green"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-green-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="blue"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="blue"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-blue-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="purple"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="purple"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-purple-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="amber"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="amber"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-amber-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="rose"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="rose"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-rose-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="teal"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="teal"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-teal-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="indigo"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="indigo"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-indigo-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="slate"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="slate"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-slate-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="orange"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="orange"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-orange-stroke);
   opacity: 0.55;
 }
-.graph-edge[data-zone="cyan"]:not(.graph-edge--highlighted):not(.graph-edge--dimmed) {
+.graph-edge[data-zone="cyan"]:not(.graph-edge--emphasized):not(.graph-edge--dimmed) {
   stroke: var(--graph-zone-cyan-stroke);
   opacity: 0.55;
 }

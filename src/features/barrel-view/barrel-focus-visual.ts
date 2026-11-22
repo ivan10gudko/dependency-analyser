@@ -1,20 +1,20 @@
 import {
-  computeHighlightedEdgeKeys,
-  computeHighlightedNodeIds,
-  edgeKey,
+  buildNeighborhoodFocusVisual,
+  computeDirectionalNeighborhood,
 } from "../graph-interaction/model/focus-neighborhood";
-import { computeDisplayHighlightedNodeIds } from "../graph-interaction/model/focus-display-highlight";
 import type {
   ConnectivityDepth,
-  EdgeVisualState,
   GraphFocusVisual,
   NeighborhoodDirection,
-  NodeVisualState,
 } from "../graph-interaction/types";
 import type { ModuleDependencyGraph } from "../graph-data/types";
 import type { ModuleId } from "../project/types";
 
-import { resolveDisplayFocusModuleId } from "./build-barrel-display-graph";
+import {
+  buildProxyToBarrelMap,
+  mapModuleIdToDisplay,
+  resolveDisplayFocusModuleId,
+} from "./build-barrel-display-graph";
 import type { BarrelDisplayOptions } from "./types";
 
 export function buildBarrelAwareFocusVisual(
@@ -27,12 +27,19 @@ export function buildBarrelAwareFocusVisual(
 ): GraphFocusVisual | null {
   if (!display || !canonical || focusedModuleId === null) return null;
 
+  const neighborhood = computeDirectionalNeighborhood(
+    canonical,
+    focusedModuleId,
+    depth,
+    direction,
+  );
+
   if (!options.barrelViewEnabled) {
-    return buildFocusVisualOnGraph(
+    return buildNeighborhoodFocusVisual(
       display,
       focusedModuleId,
-      depth,
-      direction,
+      neighborhood.descendants,
+      neighborhood.ancestors,
     );
   }
 
@@ -41,86 +48,38 @@ export function buildBarrelAwareFocusVisual(
     canonical,
     options,
   );
-  const displayHighlighted = computeDisplayHighlightedNodeIds(
+  const proxyToBarrel = buildProxyToBarrelMap(canonical, options);
+  const descendants = mapNeighborhoodToDisplay(
+    neighborhood.descendants,
     canonical,
-    display,
-    focusedModuleId,
-    depth,
-    direction,
     options,
+    proxyToBarrel,
+    display,
   );
+  const ancestors = mapNeighborhoodToDisplay(
+    neighborhood.ancestors,
+    canonical,
+    options,
+    proxyToBarrel,
+    display,
+  );
+  descendants.add(displayFocusId);
+  ancestors.add(displayFocusId);
 
-  const highlightedEdgeKeys = computeHighlightedEdgeKeys(display, displayHighlighted);
-
-  const nodeStateById = new Map<ModuleId, NodeVisualState>();
-  for (const id of display.nodes.keys()) {
-    if (id === displayFocusId) {
-      nodeStateById.set(id, "focus");
-    } else if (displayHighlighted.has(id)) {
-      nodeStateById.set(id, "related");
-    } else {
-      nodeStateById.set(id, "dimmed");
-    }
-  }
-
-  const edgeStateByKey = new Map<string, EdgeVisualState>();
-  for (const [from, targets] of display.adjacencyList) {
-    for (const to of targets) {
-      const key = edgeKey(from, to);
-      edgeStateByKey.set(
-        key,
-        highlightedEdgeKeys.has(key) ? "highlighted" : "dimmed",
-      );
-    }
-  }
-
-  return {
-    active: true,
-    nodeStateById,
-    edgeStateByKey,
-  };
+  return buildNeighborhoodFocusVisual(display, displayFocusId, descendants, ancestors);
 }
 
-function buildFocusVisualOnGraph(
-  graph: ModuleDependencyGraph,
-  focusId: ModuleId,
-  depth: ConnectivityDepth,
-  direction: NeighborhoodDirection,
-): GraphFocusVisual | null {
-  const highlightedNodeIds = computeHighlightedNodeIds(
-    graph,
-    focusId,
-    depth,
-    direction,
-  );
-
-  const highlightedEdgeKeys = computeHighlightedEdgeKeys(graph, highlightedNodeIds);
-
-  const nodeStateById = new Map<ModuleId, NodeVisualState>();
-  for (const id of graph.nodes.keys()) {
-    if (id === focusId) {
-      nodeStateById.set(id, "focus");
-    } else if (highlightedNodeIds.has(id)) {
-      nodeStateById.set(id, "related");
-    } else {
-      nodeStateById.set(id, "dimmed");
-    }
+function mapNeighborhoodToDisplay(
+  ids: ReadonlySet<ModuleId>,
+  canonical: ModuleDependencyGraph,
+  options: BarrelDisplayOptions,
+  proxyToBarrel: ReturnType<typeof buildProxyToBarrelMap>,
+  display: ModuleDependencyGraph,
+): Set<ModuleId> {
+  const mapped = new Set<ModuleId>();
+  for (const id of ids) {
+    const displayId = mapModuleIdToDisplay(id, canonical, options, proxyToBarrel);
+    if (display.nodes.has(displayId)) mapped.add(displayId);
   }
-
-  const edgeStateByKey = new Map<string, EdgeVisualState>();
-  for (const [from, targets] of graph.adjacencyList) {
-    for (const to of targets) {
-      const key = edgeKey(from, to);
-      edgeStateByKey.set(
-        key,
-        highlightedEdgeKeys.has(key) ? "highlighted" : "dimmed",
-      );
-    }
-  }
-
-  return {
-    active: true,
-    nodeStateById,
-    edgeStateByKey,
-  };
+  return mapped;
 }

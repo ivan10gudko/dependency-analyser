@@ -16,7 +16,14 @@ export interface GraphEdgeProps {
 
 const ARROW_MARKER_ID = "graph-edge-arrow";
 
-export function graphEdgeArrowMarkerId(): string {
+export function graphEdgeArrowMarkerId(visualState: EdgeVisualState = "default"): string {
+  if (
+    visualState === "descendant" ||
+    visualState === "ancestor" ||
+    visualState === "highlighted"
+  ) {
+    return `${ARROW_MARKER_ID}-${visualState}`;
+  }
   return ARROW_MARKER_ID;
 }
 
@@ -28,9 +35,14 @@ export function GraphEdge({
   zoneColorId,
 }: GraphEdgeProps) {
   const path = logicalEdgePath(routing);
+  const emphasized =
+    visualState === "descendant" ||
+    visualState === "ancestor" ||
+    visualState === "highlighted";
   const className = [
     "graph-edge",
     visualState === "default" ? undefined : `graph-edge--${visualState}`,
+    emphasized ? "graph-edge--emphasized" : undefined,
     issueSeverity ? "graph-edge--issue" : undefined,
     issueSeverity ? `graph-edge--issue-${issueSeverity}` : undefined,
   ]
@@ -42,7 +54,7 @@ export function GraphEdge({
       className={className}
       d={path}
       fill="none"
-      markerEnd={`url(#${ARROW_MARKER_ID})`}
+      markerEnd={`url(#${graphEdgeArrowMarkerId(visualState)})`}
       data-from={edge.from}
       data-to={edge.to}
       {...(zoneColorId ? { "data-zone": zoneColorId } : {})}

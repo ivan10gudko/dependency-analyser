@@ -84,8 +84,6 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
     [logicalEdges, nodeById],
   );
 
-  const arrowMarkerId = graphEdgeArrowMarkerId();
-
   return (
     <svg
       ref={ref}
@@ -97,18 +95,10 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
       aria-label="Dependency graph"
     >
       <defs>
-        <marker
-          id={arrowMarkerId}
-          className="graph-edge-marker"
-          viewBox="0 0 10 10"
-          refX="9"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          orient="auto-start-reverse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 z" />
-        </marker>
+        <EdgeArrowMarker id={graphEdgeArrowMarkerId()} />
+        <EdgeArrowMarker id={graphEdgeArrowMarkerId("descendant")} />
+        <EdgeArrowMarker id={graphEdgeArrowMarkerId("ancestor")} />
+        <EdgeArrowMarker id={graphEdgeArrowMarkerId("highlighted")} />
       </defs>
 
       <g className="graph-edges">
@@ -171,6 +161,27 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
     </svg>
   );
 }));
+
+function EdgeArrowMarker({ id }: { id: string }) {
+  const tone = id.startsWith("graph-edge-arrow-")
+    ? id.slice("graph-edge-arrow-".length)
+    : "default";
+
+  return (
+    <marker
+      id={id}
+      className={`graph-edge-marker graph-edge-marker--${tone}`}
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="6"
+      markerHeight="6"
+      orient="auto-start-reverse"
+    >
+      <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+  );
+}
 
 function resolveNodeVisualState(
   focusVisual: GraphFocusVisual | null | undefined,

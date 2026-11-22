@@ -28,3 +28,4 @@ export type {
   ModuleLinkItem,
   NodeVisualState,
 } from "./types";
+export { isHighlightedNodeState } from "./types";

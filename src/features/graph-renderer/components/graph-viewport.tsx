@@ -11,7 +11,10 @@ import {
 
 import { isBarrelNodeId } from "../../barrel-view";
 import type { IssueHighlight } from "../../analysis";
-import type { GraphFocusVisual } from "../../graph-interaction";
+import {
+  isHighlightedNodeState,
+  type GraphFocusVisual,
+} from "../../graph-interaction/types";
 import type { LocationColorId } from "../../location-colors";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
@@ -521,6 +524,18 @@ export function GraphViewport({
         <Button size="sm" variant="ghost" onClick={resetView}>
           Reset
         </Button>
+        {focusVisual?.active && !issueOnly && (
+          <span className="graph-focus-legend">
+            <span className="graph-focus-legend-item">
+              <span className="graph-focus-legend-swatch graph-focus-legend-swatch--descendant" />
+              Dependencies
+            </span>
+            <span className="graph-focus-legend-item">
+              <span className="graph-focus-legend-swatch graph-focus-legend-swatch--ancestor" />
+              Dependents
+            </span>
+          </span>
+        )}
         <span className="graph-viewport-hint">
           Коліщатко — zoom, фон — pan, вершина — перетягування
         </span>
@@ -558,7 +573,7 @@ export function GraphViewport({
 function collectHighlightKeyParts(focusVisual: GraphFocusVisual): string[] {
   const parts: string[] = [];
   for (const [id, state] of focusVisual.nodeStateById) {
-    if (state === "focus" || state === "related") parts.push(id);
+    if (isHighlightedNodeState(state)) parts.push(id);
   }
   parts.sort();
   return parts;

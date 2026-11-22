@@ -37,8 +37,8 @@ describe("buildBarrelAwareFocusVisual", () => {
     );
 
     expect(visual?.nodeStateById.get(barrelId)).toBe("focus");
-    expect(visual?.nodeStateById.get("src/ui/a.ts")).toBe("related");
-    expect(visual?.nodeStateById.get("src/out.ts")).toBe("related");
-    expect(visual?.nodeStateById.get("src/app.ts")).toBe("related");
+    expect(visual?.nodeStateById.get("src/ui/a.ts")).toBe("descendant");
+    expect(visual?.nodeStateById.get("src/out.ts")).toBe("descendant");
+    expect(visual?.nodeStateById.get("src/app.ts")).toBe("ancestor");
   });
 });

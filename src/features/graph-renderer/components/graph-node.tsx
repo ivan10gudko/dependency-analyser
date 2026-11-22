@@ -79,7 +79,8 @@ export function GraphNode({
 
 function visualStateClass(state: NodeVisualState): string | undefined {
   if (state === "default") return undefined;
-  return `graph-node--${state}`;
+  if (state === "dimmed") return "graph-node--dimmed";
+  return `graph-node--${state} graph-node--emphasized`;
 }
 
 function classNames(...parts: (string | undefined)[]): string {

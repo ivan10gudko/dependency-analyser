@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildModuleDependencyGraph } from "../../graph-data/build";
 import type { AnalyzedModule } from "../../source-analyser/types";
 import {
+  buildFocusVisual,
   computeHighlightedEdgeKeys,
   computeHighlightedNodeIds,
 } from "../model/focus-neighborhood";
@@ -116,5 +117,35 @@ describe("computeHighlightedEdgeKeys", () => {
     const nodes = computeHighlightedNodeIds(graph, "src/b.ts", 1);
     const keys = computeHighlightedEdgeKeys(graph, nodes);
     expect([...keys].sort()).toEqual(["src/a.ts\u2192src/b.ts", "src/b.ts\u2192src/c.ts"]);
+  });
+});
+
+describe("buildFocusVisual", () => {
+  const graph = buildModuleDependencyGraph([
+    moduleOf("src/a.ts", ["src/b.ts"]),
+    moduleOf("src/b.ts", ["src/c.ts"]),
+    moduleOf("src/c.ts", []),
+    moduleOf("src/d.ts", []),
+  ]);
+
+  it("paints importers as ancestors and imports as descendants", () => {
+    const visual = buildFocusVisual(graph, "src/b.ts", 1, "both");
+    expect(visual?.nodeStateById.get("src/b.ts")).toBe("focus");
+    expect(visual?.nodeStateById.get("src/a.ts")).toBe("ancestor");
+    expect(visual?.nodeStateById.get("src/c.ts")).toBe("descendant");
+    expect(visual?.nodeStateById.get("src/d.ts")).toBe("dimmed");
+    expect(visual?.edgeStateByKey.get("src/a.ts\u2192src/b.ts")).toBe("ancestor");
+    expect(visual?.edgeStateByKey.get("src/b.ts\u2192src/c.ts")).toBe("descendant");
+  });
+
+  it("marks a module reached in both directions as related", () => {
+    const cyclic = buildModuleDependencyGraph([
+      moduleOf("src/x.ts", ["src/y.ts"]),
+      moduleOf("src/y.ts", ["src/x.ts"]),
+    ]);
+    const visual = buildFocusVisual(cyclic, "src/x.ts", "all", "both");
+    expect(visual?.nodeStateById.get("src/y.ts")).toBe("related");
+    expect(visual?.edgeStateByKey.get("src/x.ts\u2192src/y.ts")).toBe("highlighted");
+    expect(visual?.edgeStateByKey.get("src/y.ts\u2192src/x.ts")).toBe("highlighted");
   });
 });

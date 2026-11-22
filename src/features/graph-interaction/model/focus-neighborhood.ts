@@ -16,57 +16,75 @@ import type {
 
 const EDGE_KEY_SEP = "\u2192";
 
-export function computeHighlightedNodeIds(
+export interface DirectionalNeighborhood {
+  /** Modules reached by following imports, including the focus module. */
+  descendants: Set<ModuleId>;
+  /** Modules that import the focus module, directly or through other importers. */
+  ancestors: Set<ModuleId>;
+}
+
+export function computeDirectionalNeighborhood(
   graph: ModuleDependencyGraph,
   focusId: ModuleId,
   depth: ConnectivityDepth,
   direction: NeighborhoodDirection = "both",
-): Set<ModuleId> {
+): DirectionalNeighborhood {
   const maxHops = connectivityDepthToMaxHops(depth);
-
-  if (direction === "both") {
-    return mergeDirectionalNeighborhoods(graph, focusId, maxHops);
-  }
-
-  const neighbors = buildDirectionalNeighborFn(graph, direction);
-  return bfsWithinDepth({
-    start: focusId,
-    neighbors,
-    maxDepth: maxHops,
-  });
-}
-
-function connectivityDepthToMaxHops(depth: ConnectivityDepth): number {
-  return depth === "all" ? Number.POSITIVE_INFINITY : depth;
-}
-
-// Union of separate dependency-only and dependent-only traversals
-function mergeDirectionalNeighborhoods(
-  graph: ModuleDependencyGraph,
-  focusId: ModuleId,
-  maxDepth: number,
-): Set<ModuleId> {
   const forward = neighborsFromAdjacencyList(graph.adjacencyList);
   const predecessors = predecessorsFromAdjacencyList(
     graph.nodes.keys(),
     graph.adjacencyList,
   );
   const dependentsOf = (node: ModuleId): Iterable<ModuleId> => predecessors.get(node) ?? [];
+  const focusOnly = new Set<ModuleId>([focusId]);
 
-  const viaDependencies = bfsWithinDepth({
-    start: focusId,
-    neighbors: forward,
-    maxDepth,
-  });
-  const viaDependents = bfsWithinDepth({
-    start: focusId,
-    neighbors: dependentsOf,
-    maxDepth,
-  });
+  if (direction === "dependencies") {
+    return {
+      descendants: bfsWithinDepth({ start: focusId, neighbors: forward, maxDepth: maxHops }),
+      ancestors: focusOnly,
+    };
+  }
 
-  const merged = new Set<ModuleId>(viaDependencies);
-  for (const id of viaDependents) merged.add(id);
+  if (direction === "dependents") {
+    return {
+      descendants: focusOnly,
+      ancestors: bfsWithinDepth({
+        start: focusId,
+        neighbors: dependentsOf,
+        maxDepth: maxHops,
+      }),
+    };
+  }
+
+  return {
+    descendants: bfsWithinDepth({ start: focusId, neighbors: forward, maxDepth: maxHops }),
+    ancestors: bfsWithinDepth({
+      start: focusId,
+      neighbors: dependentsOf,
+      maxDepth: maxHops,
+    }),
+  };
+}
+
+export function computeHighlightedNodeIds(
+  graph: ModuleDependencyGraph,
+  focusId: ModuleId,
+  depth: ConnectivityDepth,
+  direction: NeighborhoodDirection = "both",
+): Set<ModuleId> {
+  const { descendants, ancestors } = computeDirectionalNeighborhood(
+    graph,
+    focusId,
+    depth,
+    direction,
+  );
+  const merged = new Set<ModuleId>(descendants);
+  for (const id of ancestors) merged.add(id);
   return merged;
+}
+
+function connectivityDepthToMaxHops(depth: ConnectivityDepth): number {
+  return depth === "all" ? Number.POSITIVE_INFINITY : depth;
 }
 
 export function computeHighlightedEdgeKeys(
@@ -86,35 +104,55 @@ export function computeHighlightedEdgeKeys(
   return keys;
 }
 
-export function buildFocusVisual(
-  graph: ModuleDependencyGraph | null,
-  focusId: ModuleId | null,
-  depth: ConnectivityDepth,
-  direction: NeighborhoodDirection = "both",
-): GraphFocusVisual | null {
-  if (!graph || focusId === null) return null;
+export function nodeVisualStateForNeighborhood(
+  id: ModuleId,
+  focusId: ModuleId,
+  descendants: ReadonlySet<ModuleId>,
+  ancestors: ReadonlySet<ModuleId>,
+): NodeVisualState {
+  if (id === focusId) return "focus";
+  const isDescendant = descendants.has(id);
+  const isAncestor = ancestors.has(id);
+  if (isDescendant && isAncestor) return "related";
+  if (isDescendant) return "descendant";
+  if (isAncestor) return "ancestor";
+  return "dimmed";
+}
 
-  const highlightedNodeIds = computeHighlightedNodeIds(graph, focusId, depth, direction);
-  const highlightedEdgeKeys = computeHighlightedEdgeKeys(graph, highlightedNodeIds);
+export function edgeVisualStateForNeighborhood(
+  from: ModuleId,
+  to: ModuleId,
+  descendants: ReadonlySet<ModuleId>,
+  ancestors: ReadonlySet<ModuleId>,
+): EdgeVisualState {
+  const alongDescendants = descendants.has(from) && descendants.has(to);
+  const alongAncestors = ancestors.has(from) && ancestors.has(to);
+  if (alongDescendants && alongAncestors) return "highlighted";
+  if (alongDescendants) return "descendant";
+  if (alongAncestors) return "ancestor";
+  return "dimmed";
+}
 
+export function buildNeighborhoodFocusVisual(
+  graph: ModuleDependencyGraph,
+  focusId: ModuleId,
+  descendants: ReadonlySet<ModuleId>,
+  ancestors: ReadonlySet<ModuleId>,
+): GraphFocusVisual {
   const nodeStateById = new Map<ModuleId, NodeVisualState>();
   for (const id of graph.nodes.keys()) {
-    if (id === focusId) {
-      nodeStateById.set(id, "focus");
-    } else if (highlightedNodeIds.has(id)) {
-      nodeStateById.set(id, "related");
-    } else {
-      nodeStateById.set(id, "dimmed");
-    }
+    nodeStateById.set(
+      id,
+      nodeVisualStateForNeighborhood(id, focusId, descendants, ancestors),
+    );
   }
 
   const edgeStateByKey = new Map<string, EdgeVisualState>();
   for (const [from, targets] of graph.adjacencyList) {
     for (const to of targets) {
-      const key = edgeKey(from, to);
       edgeStateByKey.set(
-        key,
-        highlightedEdgeKeys.has(key) ? "highlighted" : "dimmed",
+        edgeKey(from, to),
+        edgeVisualStateForNeighborhood(from, to, descendants, ancestors),
       );
     }
   }
@@ -126,22 +164,21 @@ export function buildFocusVisual(
   };
 }
 
-function buildDirectionalNeighborFn(
-  graph: ModuleDependencyGraph,
-  direction: Exclude<NeighborhoodDirection, "both">,
-) {
-  const forward = neighborsFromAdjacencyList(graph.adjacencyList);
-  const predecessors = predecessorsFromAdjacencyList(
-    graph.nodes.keys(),
-    graph.adjacencyList,
-  );
+export function buildFocusVisual(
+  graph: ModuleDependencyGraph | null,
+  focusId: ModuleId | null,
+  depth: ConnectivityDepth,
+  direction: NeighborhoodDirection = "both",
+): GraphFocusVisual | null {
+  if (!graph || focusId === null) return null;
 
-  return (node: ModuleId): Iterable<ModuleId> => {
-    if (direction === "dependencies") {
-      return forward(node);
-    }
-    return predecessors.get(node) ?? [];
-  };
+  const { descendants, ancestors } = computeDirectionalNeighborhood(
+    graph,
+    focusId,
+    depth,
+    direction,
+  );
+  return buildNeighborhoodFocusVisual(graph, focusId, descendants, ancestors);
 }
 
 export function edgeKey(from: ModuleId, to: ModuleId): string {

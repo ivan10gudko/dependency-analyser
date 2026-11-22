@@ -32,9 +32,29 @@ export const FOCUS_SOURCES = ["user", "issue"] as const;
 
 export type FocusSource = (typeof FOCUS_SOURCES)[number];
 
-export type NodeVisualState = "default" | "dimmed" | "related" | "focus";
+export type NodeVisualState =
+  | "default"
+  | "dimmed"
+  | "ancestor"
+  | "descendant"
+  | "related"
+  | "focus";
 
-export type EdgeVisualState = "default" | "dimmed" | "highlighted";
+export type EdgeVisualState =
+  | "default"
+  | "dimmed"
+  | "ancestor"
+  | "descendant"
+  | "highlighted";
+
+export function isHighlightedNodeState(state: NodeVisualState): boolean {
+  return (
+    state === "focus" ||
+    state === "related" ||
+    state === "ancestor" ||
+    state === "descendant"
+  );
+}
 
 export interface GraphFocusVisual {
   active: boolean;

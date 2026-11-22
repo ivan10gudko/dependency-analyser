@@ -30,7 +30,6 @@ import {
   type GraphInteractionAction,
 } from "./graph-interaction-reducer";
 import { buildFocusIsolatedSubgraph } from "./model/focus-isolated-subgraph";
-import { buildIsolatedFocusVisual } from "./model/focus-isolated-visual";
 import { linkListsForModule } from "./model/module-links";
 import type {
   ConnectivityDepth,
@@ -138,10 +137,6 @@ export function GraphInteractionProvider({
     if (!filteredGraph || !displayGraph || state.focusedModuleId === null || !focusedModuleIsVisible) {
       return null;
     }
-    if (state.focusDisplayMode === "isolated") {
-      if (!displayFocusModuleId) return null;
-      return buildIsolatedFocusVisual(layoutDisplayGraph ?? displayGraph, displayFocusModuleId);
-    }
     return buildBarrelAwareFocusVisual(
       filteredGraph,
       displayGraph,
@@ -153,10 +148,7 @@ export function GraphInteractionProvider({
   }, [
     filteredGraph,
     displayGraph,
-    layoutDisplayGraph,
-    displayFocusModuleId,
     state.focusedModuleId,
-    state.focusDisplayMode,
     focusedModuleIsVisible,
     barrelDisplayOptions,
     state.connectivityDepth,

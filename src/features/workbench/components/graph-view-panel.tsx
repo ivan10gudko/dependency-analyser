@@ -89,10 +89,11 @@ export function GraphViewPanel() {
             label="Neighborhood direction"
             content={
               <>
-                <strong>Dependencies</strong> — modules this file imports.{" "}
-                <strong>Dependents</strong> — modules that import this file. With{" "}
+                <strong>Dependencies</strong> — modules this file imports, drawn in teal.{" "}
+                <strong>Dependents</strong> — modules that import this file, drawn in amber. With{" "}
                 <strong>Both</strong>, depth applies separately along imports and along importers
-                (no mixing through a neighbor’s opposite edges).
+                (no mixing through a neighbor’s opposite edges). A module reached both ways stays
+                purple.
               </>
             }
           />
