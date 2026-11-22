@@ -20,6 +20,7 @@ export {
 export type {
   ConnectivityDepth,
   FocusDisplayMode,
+  FocusSource,
   NeighborhoodDirection,
   EdgeVisualState,
   GraphFocusVisual,

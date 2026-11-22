@@ -63,9 +63,23 @@ export function buildEdgeRoutingProfiles(
       (outIndex - (outs.length - 1) / 2) * LATERAL_BIAS_STEP +
       (inIndex - (ins.length - 1) / 2) * LATERAL_BIAS_STEP;
 
+    const fromIsAbove = centerY(fromNode) <= centerY(toNode);
+
     profiles.set(key, {
-      source: portTowardNeighbor(fromNode, centerX(toNode), "bottom", outIndex, outs.length),
-      target: portTowardNeighbor(toNode, centerX(fromNode), "top", inIndex, ins.length),
+      source: portTowardNeighbor(
+        fromNode,
+        centerX(toNode),
+        fromIsAbove ? "bottom" : "top",
+        outIndex,
+        outs.length,
+      ),
+      target: portTowardNeighbor(
+        toNode,
+        centerX(fromNode),
+        fromIsAbove ? "top" : "bottom",
+        inIndex,
+        ins.length,
+      ),
       lateralBias,
     });
   }
@@ -128,4 +142,8 @@ function clamp(value: number, min: number, max: number): number {
 
 export function centerX(node: Pick<LayoutRenderNode, "x" | "width">): number {
   return node.width > 0 ? node.x + node.width / 2 : node.x;
+}
+
+function centerY(node: Pick<LayoutRenderNode, "y" | "height">): number {
+  return node.height > 0 ? node.y + node.height / 2 : node.y;
 }

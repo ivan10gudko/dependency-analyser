@@ -22,11 +22,13 @@ export function logicalEdgePath(routing: EdgeRoutingProfile): string {
 export function cubicBezierEdgePath(routing: EdgeRoutingProfile): string {
   const start = routing.source;
   const end = routing.target;
+  const downward = end.y >= start.y;
   const bend = verticalControlDistance(start, end);
   const bias = routing.lateralBias;
+  const direction = downward ? 1 : -1;
 
-  const c1 = { x: start.x + bias, y: start.y + bend };
-  const c2 = { x: end.x + bias, y: end.y - bend };
+  const c1 = { x: start.x + bias, y: start.y + bend * direction };
+  const c2 = { x: end.x + bias, y: end.y - bend * direction };
 
   return `M ${start.x} ${start.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${end.x} ${end.y}`;
 }

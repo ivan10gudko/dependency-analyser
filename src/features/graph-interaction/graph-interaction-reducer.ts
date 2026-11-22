@@ -18,6 +18,7 @@ import {
   NEIGHBORHOOD_DIRECTIONS,
   type ConnectivityDepth,
   type FocusDisplayMode,
+  type FocusSource,
   type NeighborhoodDirection,
 } from "./types";
 
@@ -35,6 +36,7 @@ const DISABLED_LOCATION_PRESETS_KEY_PREFIX =
 
 export interface GraphInteractionState {
   focusedModuleId: ModuleId | null;
+  focusSource: FocusSource;
   connectivityDepth: ConnectivityDepth;
   neighborhoodDirection: NeighborhoodDirection;
   focusDisplayMode: FocusDisplayMode;
@@ -51,7 +53,7 @@ export interface GraphInteractionState {
 }
 
 export type GraphInteractionAction =
-  | { type: "FOCUS"; id: ModuleId }
+  | { type: "FOCUS"; id: ModuleId; source?: FocusSource }
   | { type: "CLEAR" }
   | { type: "SET_DEPTH"; depth: ConnectivityDepth }
   | { type: "SET_DIRECTION"; direction: NeighborhoodDirection }
@@ -299,12 +301,14 @@ export function graphInteractionReducer(
   action: GraphInteractionAction,
 ): GraphInteractionState {
   switch (action.type) {
-    case "FOCUS":
-      if (state.focusedModuleId === action.id) return state;
-      return { ...state, focusedModuleId: action.id };
+    case "FOCUS": {
+      const source = action.source ?? "user";
+      if (state.focusedModuleId === action.id && state.focusSource === source) return state;
+      return { ...state, focusedModuleId: action.id, focusSource: source };
+    }
     case "CLEAR":
-      if (state.focusedModuleId === null) return state;
-      return { ...state, focusedModuleId: null };
+      if (state.focusedModuleId === null && state.focusSource === "user") return state;
+      return { ...state, focusedModuleId: null, focusSource: "user" };
     case "SET_DEPTH":
       if (state.connectivityDepth === action.depth) return state;
       persistConnectivityDepth(action.depth);
@@ -411,6 +415,7 @@ export function graphInteractionReducer(
       const disabledLocationPresetIds = loadStoredDisabledLocationPresetIds(projectKey);
       return {
         focusedModuleId: null,
+        focusSource: "user",
         connectivityDepth: state.connectivityDepth,
         neighborhoodDirection: state.neighborhoodDirection,
         focusDisplayMode: state.focusDisplayMode,
@@ -442,6 +447,7 @@ function sameStringList(left: readonly string[], right: readonly string[]): bool
 export function createInitialGraphInteractionState(): GraphInteractionState {
   return {
     focusedModuleId: null,
+    focusSource: "user",
     connectivityDepth: loadStoredConnectivityDepth(),
     neighborhoodDirection: loadStoredNeighborhoodDirection(),
     focusDisplayMode: loadStoredFocusDisplayMode(),

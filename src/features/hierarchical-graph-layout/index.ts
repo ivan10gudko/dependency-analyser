@@ -26,6 +26,7 @@ export {
 export {
   buildHierarchicalLayout,
   pickLayoutRoot,
+  PREFERRED_ROOTS,
   toLayoutRenderModel,
   type BuildHierarchicalLayoutOptions,
   type HierarchicalLayoutResult,
@@ -37,7 +38,11 @@ export {
 export { buildInitialLayerOrder, maxLayerIndex, type LayerOrder } from "./layer-order";
 export { prepareGraphForLayout } from "./prepare-layout-graph";
 export { createDummyNodes } from "./insert-dummy-nodes";
-export { breakCycles } from "./remove-cycles";
+export {
+  breakCycles,
+  type BreakCyclesResult,
+  type ReversedLayoutEdge,
+} from "./remove-cycles";
 export { collectReachableFromRoot, subgraphOf } from "./subgraph";
 export {
   DEFAULT_HORIZONTAL_NODE_OFFSET,

@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { isBarrelNodeId } from "../../barrel-view";
+import type { IssueHighlight } from "../../analysis";
 import type { GraphFocusVisual } from "../../graph-interaction";
 import type { LocationColorId } from "../../location-colors";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
@@ -76,6 +77,8 @@ export interface GraphViewportProps {
   padding?: number;
   focusedModuleId?: string | null;
   focusVisual?: GraphFocusVisual | null;
+  issueHighlight?: IssueHighlight | null;
+  issueOnly?: boolean;
   locationColorByModuleId?: ReadonlyMap<string, LocationColorId> | null;
   onFocusModule?: (moduleId: string) => void;
   onClearFocus?: () => void;
@@ -89,6 +92,8 @@ export function GraphViewport({
   padding,
   focusedModuleId = null,
   focusVisual = null,
+  issueHighlight = null,
+  issueOnly = false,
   locationColorByModuleId = null,
   onFocusModule,
   onClearFocus,
@@ -539,6 +544,8 @@ export function GraphViewport({
           viewBox={formatViewBox(baseViewBox)}
           fillContainer
           focusVisual={focusVisual}
+          issueHighlight={issueHighlight}
+          issueOnly={issueOnly}
           locationColorByModuleId={locationColorByModuleId}
           expandedBarrelDirectories={expandedBarrelDirectories}
           onNodePointerDown={onNodePointerDown}

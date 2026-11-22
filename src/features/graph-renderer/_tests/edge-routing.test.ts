@@ -70,4 +70,16 @@ describe("buildEdgeRoutingProfiles", () => {
     expect(leftPort).toBeLessThan(80 + 80);
     expect(rightPort).toBeGreaterThan(80);
   });
+
+  it("anchors an upward edge on the facing borders", () => {
+    const edges: LogicalEdge[] = [{ from: "Low", to: "High", waypoints: [] }];
+    const nodeById = new Map<string, LayoutRenderNode>([
+      ["Low", node("Low", { x: 40, y: 120, width: 80, height: 28 })],
+      ["High", node("High", { x: 40, y: 0, width: 80, height: 28 })],
+    ]);
+
+    const profile = buildEdgeRoutingProfiles(edges, nodeById).get("Low\u2192High");
+    expect(profile?.source.y).toBe(120);
+    expect(profile?.target.y).toBe(28);
+  });
 });

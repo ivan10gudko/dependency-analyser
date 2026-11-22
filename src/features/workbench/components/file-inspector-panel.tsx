@@ -1,3 +1,4 @@
+import { useAnalysis } from "../../analysis";
 import { EmptyState, ScrollArea } from "../../../shared/ui";
 import { useGraphInteraction } from "../../graph-interaction";
 
@@ -13,6 +14,7 @@ export function FileInspectorPanel() {
     projectRootAbsolute,
     focusModule,
   } = useGraphInteraction();
+  const { settings } = useAnalysis();
 
   if (focusedModuleId === null) {
     return (
@@ -33,6 +35,8 @@ export function FileInspectorPanel() {
         projectRootAbsolute={projectRootAbsolute}
         dependencyCount={dependencies.length}
         dependentCount={dependents.length}
+        fanOutThreshold={settings.fanOutThreshold}
+        fanInThreshold={settings.fanInThreshold}
       />
       <ModuleLinkList
         title="Dependencies"

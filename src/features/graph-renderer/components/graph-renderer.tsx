@@ -1,6 +1,7 @@
 import { forwardRef, memo, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 
 import { barrelFolderFromNodeId } from "../../barrel-view";
+import type { IssueHighlight } from "../../analysis";
 import type {
   EdgeVisualState,
   GraphFocusVisual,
@@ -16,7 +17,7 @@ import { GraphEdge, graphEdgeArrowMarkerId } from "./graph-edge";
 import { GraphNode } from "./graph-node";
 import { computeLayoutBounds } from "../utils/layout-bounds";
 import { buildEdgeRoutingProfiles } from "../utils/edge-routing";
-import { buildLogicalEdges } from "../utils/logical-edges";
+import { buildLogicalEdges, restoreReversedLogicalEdges } from "../utils/logical-edges";
 
 export interface GraphRendererProps {
   layout: LayoutRenderModel;
@@ -24,6 +25,9 @@ export interface GraphRendererProps {
   viewBox?: string;
   fillContainer?: boolean;
   focusVisual?: GraphFocusVisual | null;
+  issueHighlight?: IssueHighlight | null;
+  /** Paint only the selected issue. Neighborhood focus colors stay off. */
+  issueOnly?: boolean;
   locationColorByModuleId?: ReadonlyMap<string, LocationColorId> | null;
   expandedBarrelDirectories?: ReadonlySet<string>;
   onNodePointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
@@ -37,6 +41,8 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
       viewBox: viewBoxProp,
       fillContainer = false,
       focusVisual = null,
+      issueHighlight = null,
+      issueOnly = false,
       locationColorByModuleId = null,
       expandedBarrelDirectories,
       onNodePointerDown,
@@ -65,8 +71,12 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
   );
 
   const logicalEdges = useMemo(
-    () => buildLogicalEdges(layout.edges, nodeById),
-    [layout.edges, nodeById],
+    () =>
+      restoreReversedLogicalEdges(
+        buildLogicalEdges(layout.edges, nodeById),
+        layout.reversedEdges,
+      ),
+    [layout.edges, layout.reversedEdges, nodeById],
   );
 
   const routingProfiles = useMemo(
@@ -107,8 +117,16 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
           const routing = routingProfiles.get(edgeKeyId);
           if (!routing) return null;
 
-          const visualState = resolveEdgeVisualState(focusVisual, edgeKeyId);
+          const visualState = resolveEdgeVisualState(
+            focusVisual,
+            edgeKeyId,
+            issueOnly,
+            issueHighlight,
+          );
           const edgeZoneColorId = locationColorByModuleId?.get(edge.to);
+          const issueSeverity = issueHighlight?.edgeKeys.has(edgeKeyId)
+            ? issueHighlight.severity
+            : null;
 
           return (
             <GraphEdge
@@ -116,6 +134,7 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
               edge={edge}
               routing={routing}
               visualState={visualState}
+              issueSeverity={issueSeverity}
               zoneColorId={edgeZoneColorId}
             />
           );
@@ -127,7 +146,15 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
           <GraphNode
             key={node.id}
             node={node}
-            visualState={resolveNodeVisualState(focusVisual, node.id)}
+            visualState={resolveNodeVisualState(
+              focusVisual,
+              node.id,
+              issueOnly,
+              issueHighlight,
+            )}
+            issueSeverity={
+              issueHighlight?.nodeIds.has(node.id) ? issueHighlight.severity : null
+            }
             zoneColorId={locationColorByModuleId?.get(node.id)}
             barrelContentsVisible={
               expandedBarrelDirectories !== undefined &&
@@ -148,7 +175,12 @@ export const GraphRenderer = memo(forwardRef<SVGSVGElement, GraphRendererProps>(
 function resolveNodeVisualState(
   focusVisual: GraphFocusVisual | null | undefined,
   nodeId: string,
+  issueOnly: boolean,
+  issueHighlight: IssueHighlight | null,
 ): NodeVisualState {
+  if (issueOnly && issueHighlight) {
+    return issueHighlight.nodeIds.has(nodeId) ? "default" : "dimmed";
+  }
   if (!focusVisual?.active) {
     return focusVisual?.nodeStateById.get(nodeId) ?? "default";
   }
@@ -158,7 +190,12 @@ function resolveNodeVisualState(
 function resolveEdgeVisualState(
   focusVisual: GraphFocusVisual | null | undefined,
   edgeKeyId: string,
+  issueOnly: boolean,
+  issueHighlight: IssueHighlight | null,
 ): EdgeVisualState {
+  if (issueOnly && issueHighlight) {
+    return issueHighlight.edgeKeys.has(edgeKeyId) ? "default" : "dimmed";
+  }
   if (!focusVisual?.active) {
     return focusVisual?.edgeStateByKey.get(edgeKeyId) ?? "default";
   }

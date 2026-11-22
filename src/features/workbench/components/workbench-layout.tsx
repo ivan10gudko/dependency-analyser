@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { useTheme } from "../../../shared/theme/use-theme";
 import type { ProjectWorkspace } from "../../project/types/workspace";
 
@@ -17,6 +19,7 @@ export interface WorkbenchLayoutProps {
 export function WorkbenchLayout({ workspace }: WorkbenchLayoutProps) {
   const { preference, setPreference } = useTheme();
   const panels = usePanelLayout();
+  const [sidebarTab, setSidebarTab] = useState("problems");
 
   return (
     <main className="wb-root">
@@ -43,7 +46,7 @@ export function WorkbenchLayout({ workspace }: WorkbenchLayoutProps) {
           <ResizeHandle onResize={panels.adjustLeftWidth} />
         )}
 
-        <GraphPanel workspace={workspace} />
+        <GraphPanel workspace={workspace} sidebarTab={sidebarTab} />
 
         {panels.rightVisible && (
           <ResizeHandle onResize={(delta) => panels.adjustRightWidth(-delta)} />
@@ -54,7 +57,11 @@ export function WorkbenchLayout({ workspace }: WorkbenchLayoutProps) {
         )}
 
         <PanelSlot visible={panels.rightVisible} width={panels.rightWidth}>
-          <RightSidebar workspace={workspace} />
+          <RightSidebar
+            workspace={workspace}
+            activeTab={sidebarTab}
+            onActiveTabChange={setSidebarTab}
+          />
         </PanelSlot>
       </div>
     </main>

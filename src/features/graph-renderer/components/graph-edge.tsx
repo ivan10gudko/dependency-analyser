@@ -1,3 +1,4 @@
+import type { Severity } from "../../analysis";
 import type { EdgeVisualState } from "../../graph-interaction";
 import type { LocationColorId } from "../../location-colors";
 
@@ -9,6 +10,7 @@ export interface GraphEdgeProps {
   edge: LogicalEdge;
   routing: EdgeRoutingProfile;
   visualState?: EdgeVisualState;
+  issueSeverity?: Severity | null;
   zoneColorId?: LocationColorId;
 }
 
@@ -22,11 +24,18 @@ export function GraphEdge({
   edge,
   routing,
   visualState = "default",
+  issueSeverity = null,
   zoneColorId,
 }: GraphEdgeProps) {
   const path = logicalEdgePath(routing);
-  const className =
-    visualState === "default" ? "graph-edge" : `graph-edge graph-edge--${visualState}`;
+  const className = [
+    "graph-edge",
+    visualState === "default" ? undefined : `graph-edge--${visualState}`,
+    issueSeverity ? "graph-edge--issue" : undefined,
+    issueSeverity ? `graph-edge--issue-${issueSeverity}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <path

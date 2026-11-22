@@ -1,5 +1,6 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 
+import type { Severity } from "../../analysis";
 import type { LayoutRenderNode } from "../../hierarchical-graph-layout";
 import type { NodeVisualState } from "../../graph-interaction";
 import type { LocationColorId } from "../../location-colors";
@@ -7,6 +8,7 @@ import type { LocationColorId } from "../../location-colors";
 export interface GraphNodeProps {
   node: LayoutRenderNode;
   visualState?: NodeVisualState;
+  issueSeverity?: Severity | null;
   zoneColorId?: LocationColorId;
   barrelContentsVisible?: boolean;
   onPointerDown?: (event: ReactPointerEvent<SVGGElement>) => void;
@@ -15,6 +17,7 @@ export interface GraphNodeProps {
 export function GraphNode({
   node,
   visualState = "default",
+  issueSeverity = null,
   zoneColorId,
   barrelContentsVisible = false,
   onPointerDown,
@@ -28,6 +31,8 @@ export function GraphNode({
     isBarrel ? "graph-node--barrel" : undefined,
     isBarrel && barrelContentsVisible ? "graph-node--barrel-open" : undefined,
     visualStateClass(visualState),
+    issueSeverity ? "graph-node--issue" : undefined,
+    issueSeverity ? `graph-node--issue-${issueSeverity}` : undefined,
   );
 
   return (

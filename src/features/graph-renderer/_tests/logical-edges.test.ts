@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LayoutRenderNode } from "../../hierarchical-graph-layout";
 
-import { buildLogicalEdges } from "../utils/logical-edges";
+import { buildLogicalEdges, restoreReversedLogicalEdges } from "../utils/logical-edges";
 
 function node(
   id: string,
@@ -39,6 +39,34 @@ describe("buildLogicalEdges", () => {
         to: "B",
         waypoints: [nodes[1]],
       },
+    ]);
+  });
+
+  it("draws a layout-reversed edge in its original direction", () => {
+    const edges = buildLogicalEdges(
+      [
+        { from: "B", to: "A" },
+      ],
+      new Map([
+        ["A", node("A", { y: 80 })],
+        ["B", node("B", { y: 0 })],
+      ]),
+    );
+
+    expect(restoreReversedLogicalEdges(edges, [{ from: "A", to: "B" }])).toEqual([
+      { from: "A", to: "B", waypoints: [] },
+    ]);
+  });
+
+  it("keeps both directions when the reversal shares the layout edge", () => {
+    const edges = [{ from: "A", to: "B", waypoints: [] }];
+    expect(
+      restoreReversedLogicalEdges(edges, [
+        { from: "B", to: "A", sharesLayoutEdge: true },
+      ]),
+    ).toEqual([
+      { from: "A", to: "B", waypoints: [] },
+      { from: "B", to: "A", waypoints: [] },
     ]);
   });
 });

@@ -1,14 +1,16 @@
 import { useCallback, useMemo } from "react";
 
+import { buildIssueFocusVisual, useAnalysis } from "../../analysis";
 import {
   barrelFolderFromNodeId,
   detectBarrelFolders,
 } from "../../barrel-view";
-import { useGraphInteraction } from "../../graph-interaction";
+import { useGraphInteraction, type FocusDisplayMode } from "../../graph-interaction";
 import { enrichFocusVisualForLayout } from "../../graph-interaction/model/enrich-focus-visual";
-import { buildHierarchicalLayout } from "../../hierarchical-graph-layout";
+import { buildHierarchicalLayout, subgraphOf } from "../../hierarchical-graph-layout";
 import { Button, EmptyState, Surface } from "../../../shared/ui";
 import { GraphViewport } from "../../graph-renderer";
+import type { ModuleDependencyGraph } from "../../graph-data/types";
 import type { LoadingState, ProjectWorkspace } from "../../project/types/workspace";
 
 const LOADING_LABEL: Record<Exclude<LoadingState, "idle">, string> = {
@@ -20,12 +22,14 @@ const LOADING_LABEL: Record<Exclude<LoadingState, "idle">, string> = {
 
 export interface GraphPanelProps {
   workspace: ProjectWorkspace;
+  sidebarTab: string;
 }
 
-export function GraphPanel({ workspace }: GraphPanelProps) {
+export function GraphPanel({ workspace, sidebarTab }: GraphPanelProps) {
   const {
     displayFocusModuleId,
     focusVisual,
+    focusDisplayMode,
     focusModule,
     clearFocus,
     displayGraph,
@@ -34,6 +38,9 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
     expandedBarrelDirectories,
     locationColorByModuleId,
   } = useGraphInteraction();
+  const { issueHighlight } = useAnalysis();
+  const onProblems = sidebarTab === "problems";
+  const showIssue = onProblems && issueHighlight != null;
 
   const filtersHidEverything =
     (workspace.dependencyGraph?.nodes.size ?? 0) > 0 &&
@@ -43,20 +50,40 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
   const graphLayout = useMemo(() => {
     const base = workspace.layoutModel;
     if (!base) return null;
-    const layoutSource = layoutDisplayGraph;
+    const layoutSource = resolveLayoutSource({
+      showIssue,
+      onProblems,
+      focusDisplayMode,
+      displayGraph,
+      layoutDisplayGraph,
+      issueNodeIds: issueHighlight?.nodeIds,
+      dependencyGraph: workspace.dependencyGraph,
+    });
     if (!layoutSource || layoutSource === workspace.dependencyGraph) return base;
-    if (layoutSource.nodes.size === 0) return null;
+    if (layoutSource.nodes.size === 0) return showIssue ? base : null;
     try {
       return buildHierarchicalLayout(layoutSource).model;
     } catch {
       return base;
     }
-  }, [workspace.layoutModel, workspace.dependencyGraph, layoutDisplayGraph]);
+  }, [
+    workspace.layoutModel,
+    workspace.dependencyGraph,
+    layoutDisplayGraph,
+    displayGraph,
+    showIssue,
+    onProblems,
+    focusDisplayMode,
+    issueHighlight,
+  ]);
 
-  const layoutFocusVisual = useMemo(
-    () => enrichFocusVisualForLayout(focusVisual, graphLayout),
-    [focusVisual, graphLayout],
-  );
+  const layoutFocusVisual = useMemo(() => {
+    if (showIssue && issueHighlight) {
+      return enrichFocusVisualForLayout(buildIssueFocusVisual(issueHighlight), graphLayout);
+    }
+    if (onProblems) return null;
+    return enrichFocusVisualForLayout(focusVisual, graphLayout);
+  }, [showIssue, onProblems, issueHighlight, focusVisual, graphLayout]);
 
   const focusBarrelNode = useCallback(
     (barrelNodeId: string) => {
@@ -120,6 +147,8 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
           layout={graphLayout}
           focusedModuleId={displayFocusModuleId}
           focusVisual={layoutFocusVisual}
+          issueHighlight={showIssue ? issueHighlight : null}
+          issueOnly={showIssue}
           onFocusModule={focusModule}
           onClearFocus={clearFocus}
           onFocusBarrel={focusBarrelNode}
@@ -144,4 +173,30 @@ export function GraphPanel({ workspace }: GraphPanelProps) {
       )}
     </Surface>
   );
+}
+
+function resolveLayoutSource({
+  showIssue,
+  onProblems,
+  focusDisplayMode,
+  displayGraph,
+  layoutDisplayGraph,
+  issueNodeIds,
+  dependencyGraph,
+}: {
+  showIssue: boolean;
+  onProblems: boolean;
+  focusDisplayMode: FocusDisplayMode;
+  displayGraph: ModuleDependencyGraph | null;
+  layoutDisplayGraph: ModuleDependencyGraph | null;
+  issueNodeIds: ReadonlySet<string> | undefined;
+  dependencyGraph: ModuleDependencyGraph | null;
+}): ModuleDependencyGraph | null {
+  if (showIssue && displayGraph && issueNodeIds) {
+    if (focusDisplayMode !== "isolated") return displayGraph;
+    const issueGraph = subgraphOf(displayGraph, issueNodeIds);
+    return issueGraph.nodes.size > 0 ? issueGraph : displayGraph;
+  }
+  if (onProblems) return displayGraph ?? dependencyGraph;
+  return layoutDisplayGraph;
 }

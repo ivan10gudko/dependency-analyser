@@ -242,3 +242,39 @@
   stroke: var(--graph-zone-cyan-stroke);
   opacity: 0.55;
 }
+
+.graph-node--issue {
+  opacity: 1 !important;
+}
+
+.graph-node--issue-error .graph-node-box {
+  stroke: var(--color-danger) !important;
+  stroke-width: 2.5;
+}
+
+.graph-node--issue-warning .graph-node-box {
+  stroke: var(--color-warning) !important;
+  stroke-width: 2.5;
+}
+
+.graph-node--issue-info .graph-node-box {
+  stroke: var(--color-accent) !important;
+  stroke-width: 2.5;
+}
+
+.graph-edge--issue {
+  opacity: 1 !important;
+  stroke-width: 2.25;
+}
+
+.graph-edge--issue-error {
+  stroke: var(--color-danger) !important;
+}
+
+.graph-edge--issue-warning {
+  stroke: var(--color-warning) !important;
+}
+
+.graph-edge--issue-info {
+  stroke: var(--color-accent) !important;
+}

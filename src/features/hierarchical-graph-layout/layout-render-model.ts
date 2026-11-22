@@ -13,7 +13,7 @@ import { reduceCrossings } from "./crossing-reduction";
 import { createDummyNodes } from "./insert-dummy-nodes";
 import { buildInitialLayerOrder, type LayerOrder } from "./layer-order";
 import { prepareGraphForLayout } from "./prepare-layout-graph";
-import { breakCycles } from "./remove-cycles";
+import { breakCycles, type ReversedLayoutEdge } from "./remove-cycles";
 import type { LayoutGraph } from "./types";
 
 export type LayoutRenderNodeKind = "module" | "barrel";
@@ -33,11 +33,15 @@ export interface LayoutRenderNode {
 export interface LayoutRenderEdge {
   from: string;
   to: string;
+  /** Set on reversedEdges when the layout edge also represents a real forward dependency. */
+  sharesLayoutEdge?: boolean;
 }
 
 export interface LayoutRenderModel {
   nodes: LayoutRenderNode[];
   edges: LayoutRenderEdge[];
+  /** Original direction of edges the layout reversed to stay acyclic. */
+  reversedEdges?: LayoutRenderEdge[];
   layerOrder: Record<string, string[]>;
 }
 
@@ -59,7 +63,7 @@ export interface BuildHierarchicalLayoutOptions extends AssignYCoordinatesOption
   xIterations?: number;
 }
 
-const PREFERRED_ROOTS = [
+export const PREFERRED_ROOTS = [
   "src/main.tsx",
   "src/main.ts",
   "src/App.tsx",
@@ -82,7 +86,7 @@ export function buildHierarchicalLayout(
 ): HierarchicalLayoutResult {
   const graphForLayout = prepareGraphForLayout(graph);
   const root = options?.root ?? pickLayoutRoot(graphForLayout);
-  const acyclic = breakCycles(graphForLayout, root);
+  const { graph: acyclic, reversedEdges } = breakCycles(graphForLayout, root);
   const layers = assignLayers(acyclic);
   const layoutGraph = createDummyNodes(acyclic, layers);
   const layerOrder = buildInitialLayerOrder(layoutGraph);
@@ -98,7 +102,7 @@ export function buildHierarchicalLayout(
   return {
     layoutGraph,
     layerOrder,
-    model: toLayoutRenderModel(layoutGraph, layerOrder),
+    model: toLayoutRenderModel(layoutGraph, layerOrder, reversedEdges),
     scope: {
       root,
       totalModules: acyclic.nodes.size,
@@ -160,6 +164,7 @@ function reachableSize(graph: ModuleDependencyGraph, root: NodeId): number {
 export function toLayoutRenderModel(
   layout: LayoutGraph,
   layerOrder: LayerOrder,
+  reversedEdges: readonly ReversedLayoutEdge[] = [],
 ): LayoutRenderModel {
   const nodes: LayoutRenderNode[] = [];
 
@@ -201,5 +206,14 @@ export function toLayoutRenderModel(
     layerOrderRecord[String(layer)] = [...ids];
   }
 
-  return { nodes, edges, layerOrder: layerOrderRecord };
+  return {
+    nodes,
+    edges,
+    reversedEdges: reversedEdges.map((edge) => ({
+      from: edge.from,
+      to: edge.to,
+      sharesLayoutEdge: edge.sharesLayoutEdge,
+    })),
+    layerOrder: layerOrderRecord,
+  };
 }

@@ -28,6 +28,10 @@ export function isFocusDisplayMode(raw: string): raw is FocusDisplayMode {
   return (FOCUS_DISPLAY_MODES as readonly string[]).includes(raw);
 }
 
+export const FOCUS_SOURCES = ["user", "issue"] as const;
+
+export type FocusSource = (typeof FOCUS_SOURCES)[number];
+
 export type NodeVisualState = "default" | "dimmed" | "related" | "focus";
 
 export type EdgeVisualState = "default" | "dimmed" | "highlighted";
@@ -45,6 +49,7 @@ export interface ModuleLinkItem {
 
 export interface GraphInteractionValue {
   focusedModuleId: ModuleId | null;
+  focusSource: FocusSource;
   displayFocusModuleId: ModuleId | null;
   connectivityDepth: ConnectivityDepth;
   neighborhoodDirection: NeighborhoodDirection;
@@ -67,7 +72,7 @@ export interface GraphInteractionValue {
   dependents: readonly ModuleLinkItem[];
   moduleFileStats: ReadonlyMap<ModuleId, ModuleFileStats>;
   projectRootAbsolute: string | null;
-  focusModule: (id: ModuleId) => void;
+  focusModule: (id: ModuleId, source?: FocusSource) => void;
   clearFocus: () => void;
   setConnectivityDepth: (depth: ConnectivityDepth) => void;
   setNeighborhoodDirection: (direction: NeighborhoodDirection) => void;

@@ -658,3 +658,114 @@
   min-width: 4.5rem;
   font-weight: 500;
 }
+
+.wb-issues {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wb-issues-toolbar {
+  flex-shrink: 0;
+  padding: 0.75rem 0.75rem 0.5rem;
+}
+
+.wb-issues-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.wb-issues-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-fg-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.wb-issues-filter.is-active {
+  border-color: var(--color-accent);
+  color: var(--color-fg);
+}
+
+.wb-issues-tab-counts {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-issues-tab-counts .is-error {
+  color: var(--color-danger);
+}
+
+.wb-issues-tab-counts .is-warning {
+  color: var(--color-warning);
+}
+
+.wb-issues-tab-counts .is-info {
+  color: var(--color-fg-muted);
+}
+
+.wb-issues-rules {
+  margin: 0 0.75rem 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.wb-issues-rules summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wb-issues-rules-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.wb-issues-fsd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+
+.wb-issues-thresholds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.wb-issues-thresholds label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 12px;
+  color: var(--color-fg);
+}
+
+.wb-issues-thresholds input {
+  width: 100%;
+  font: inherit;
+}
+
+.wb-issues-group-title {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.75rem 0.75rem 0.25rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}

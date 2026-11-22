@@ -52,3 +52,35 @@ export function buildLogicalEdges(
 
   return logical;
 }
+
+const EDGE_KEY_SEP = "\u2192";
+
+/** Layout walks reversed back-edges downward. Drawing uses the original direction. */
+export function restoreReversedLogicalEdges(
+  edges: readonly LogicalEdge[],
+  reversedEdges: readonly { from: string; to: string; sharesLayoutEdge?: boolean }[] | undefined,
+): LogicalEdge[] {
+  if (!reversedEdges || reversedEdges.length === 0) return [...edges];
+
+  const originalByLayoutKey = new Map<string, { sharesLayoutEdge?: boolean }>();
+  for (const edge of reversedEdges) {
+    originalByLayoutKey.set(`${edge.to}${EDGE_KEY_SEP}${edge.from}`, edge);
+  }
+
+  const restored: LogicalEdge[] = [];
+  for (const edge of edges) {
+    const reversal = originalByLayoutKey.get(`${edge.from}${EDGE_KEY_SEP}${edge.to}`);
+    if (!reversal) {
+      restored.push(edge);
+      continue;
+    }
+    const flipped: LogicalEdge = {
+      from: edge.to,
+      to: edge.from,
+      waypoints: [...edge.waypoints].reverse(),
+    };
+    if (reversal.sharesLayoutEdge) restored.push(edge);
+    restored.push(flipped);
+  }
+  return restored;
+}

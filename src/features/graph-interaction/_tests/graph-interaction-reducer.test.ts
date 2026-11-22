@@ -13,6 +13,7 @@ import {
 
 const baseState = (): GraphInteractionState => ({
   focusedModuleId: null,
+  focusSource: "user",
   connectivityDepth: DEFAULT_CONNECTIVITY_DEPTH,
   neighborhoodDirection: DEFAULT_NEIGHBORHOOD_DIRECTION,
   focusDisplayMode: DEFAULT_FOCUS_DISPLAY_MODE,
@@ -305,5 +306,30 @@ describe("graphInteractionReducer location colors", () => {
       projectKey: "/repo",
     });
     expect(backToRepo.disabledLocationPresetIds).toEqual(["shared"]);
+  });
+});
+
+describe("graphInteractionReducer focus source", () => {
+  it("records an issue focus and lets a later user focus replace it", () => {
+    const fromIssue = graphInteractionReducer(baseState(), {
+      type: "FOCUS",
+      id: "src/app.tsx",
+      source: "issue",
+    });
+    expect(fromIssue.focusSource).toBe("issue");
+
+    const sameTarget = graphInteractionReducer(fromIssue, {
+      type: "FOCUS",
+      id: "src/app.tsx",
+      source: "issue",
+    });
+    expect(sameTarget).toBe(fromIssue);
+
+    const fromUser = graphInteractionReducer(fromIssue, {
+      type: "FOCUS",
+      id: "src/app.tsx",
+    });
+    expect(fromUser.focusSource).toBe("user");
+    expect(fromUser.focusedModuleId).toBe("src/app.tsx");
   });
 });

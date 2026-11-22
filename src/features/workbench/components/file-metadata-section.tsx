@@ -12,6 +12,8 @@ export interface FileMetadataSectionProps {
   projectRootAbsolute: string | null;
   dependencyCount: number;
   dependentCount: number;
+  fanOutThreshold: number;
+  fanInThreshold: number;
 }
 
 export function FileMetadataSection({
@@ -20,6 +22,8 @@ export function FileMetadataSection({
   projectRootAbsolute,
   dependencyCount,
   dependentCount,
+  fanOutThreshold,
+  fanInThreshold,
 }: FileMetadataSectionProps) {
   const canReveal = isTauri() && projectRootAbsolute != null;
 
@@ -32,8 +36,8 @@ export function FileMetadataSection({
         <MetaRow label="Type" value={stats?.extension || extensionOf(moduleId) || "—"} />
         <MetaRow label="Size" value={formatBytes(stats?.sizeBytes)} />
         <MetaRow label="Lines" value={stats ? String(stats.lineCount) : "—"} />
-        <MetaRow label="Dependencies" value={String(dependencyCount)} />
-        <MetaRow label="Dependents" value={String(dependentCount)} />
+        <MetaRow label="Fan-out" value={metricValue(dependencyCount, fanOutThreshold)} />
+        <MetaRow label="Fan-in" value={metricValue(dependentCount, fanInThreshold)} />
       </dl>
       <Button
         variant="primary"
@@ -62,6 +66,11 @@ function MetaRow({
       <dd className={mono ? "wb-metadata-mono" : undefined}>{value}</dd>
     </>
   );
+}
+
+function metricValue(count: number, threshold: number): string {
+  if (count > threshold) return `${count} (over ${threshold})`;
+  return String(count);
 }
 
 function formatBytes(sizeBytes: number | undefined): string {

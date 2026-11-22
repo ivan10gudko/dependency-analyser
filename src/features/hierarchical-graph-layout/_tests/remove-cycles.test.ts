@@ -65,11 +65,12 @@ describe("breakCycles", () => {
       ["F", "B"],
     ]);
 
-    const acyclic = breakCycles(graph, "A");
+    const { graph: acyclic, reversedEdges } = breakCycles(graph, "A");
     const neighbors = (id: NodeId) => [...(acyclic.adjacencyList.get(id) ?? [])];
 
     expect(neighbors("F")).not.toContain("B");
     expect(neighbors("B")).toContain("F");
+    expect(reversedEdges).toEqual([{ from: "F", to: "B", sharesLayoutEdge: false }]);
 
     const nodeIds = new Set(acyclic.nodes.keys());
     expect(hasDirectedCycle(acyclic.adjacencyList, nodeIds)).toBe(false);
@@ -82,7 +83,7 @@ describe("breakCycles", () => {
       ["C", "A"],
     ]);
 
-    const acyclic = breakCycles(graph, "B");
+    const { graph: acyclic } = breakCycles(graph, "B");
     const nodeIds = new Set(acyclic.nodes.keys());
 
     expect(hasDirectedCycle(acyclic.adjacencyList, nodeIds)).toBe(false);
@@ -98,9 +99,22 @@ describe("breakCycles", () => {
       ["B", "D"],
     ]);
 
-    const acyclic = breakCycles(graph, "A");
+    const { graph: acyclic } = breakCycles(graph, "A");
 
     expect(acyclic.adjacencyList.get("A")).toEqual(new Set(["B", "C"]));
     expect(acyclic.adjacencyList.get("B")).toEqual(new Set(["D"]));
+  });
+
+  it("keeps both directions when a reversal lands on an existing edge", () => {
+    const graph = graphOf([
+      ["A", "B"],
+      ["B", "A"],
+    ]);
+
+    const { graph: acyclic, reversedEdges } = breakCycles(graph, "A");
+
+    expect(reversedEdges).toEqual([{ from: "B", to: "A", sharesLayoutEdge: true }]);
+    expect(acyclic.adjacencyList.get("A")).toEqual(new Set(["B"]));
+    expect(acyclic.adjacencyList.get("B")?.size ?? 0).toBe(0);
   });
 });

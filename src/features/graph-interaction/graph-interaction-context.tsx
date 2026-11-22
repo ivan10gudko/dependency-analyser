@@ -35,6 +35,7 @@ import { linkListsForModule } from "./model/module-links";
 import type {
   ConnectivityDepth,
   FocusDisplayMode,
+  FocusSource,
   GraphInteractionValue,
   NeighborhoodDirection,
 } from "./types";
@@ -196,8 +197,8 @@ export function GraphInteractionProvider({
     moduleIds,
   ]);
 
-  const focusModule = useCallback((id: ModuleId) => {
-    dispatch({ type: "FOCUS", id });
+  const focusModule = useCallback((id: ModuleId, source: FocusSource = "user") => {
+    dispatch({ type: "FOCUS", id, source });
   }, []);
 
   const clearFocus = useCallback(() => dispatch({ type: "CLEAR" }), []);
@@ -287,6 +288,7 @@ export function GraphInteractionProvider({
   const value = useMemo<GraphInteractionValue>(
     () => ({
       focusedModuleId: state.focusedModuleId,
+      focusSource: state.focusSource,
       displayFocusModuleId: displayFocusModuleId,
       connectivityDepth: state.connectivityDepth,
       neighborhoodDirection: state.neighborhoodDirection,
@@ -330,6 +332,7 @@ export function GraphInteractionProvider({
     }),
     [
       state.focusedModuleId,
+      state.focusSource,
       displayFocusModuleId,
       state.connectivityDepth,
       state.neighborhoodDirection,

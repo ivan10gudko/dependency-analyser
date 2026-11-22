@@ -1,4 +1,4 @@
-import type { CycleBreak, SelfDependency } from "../../architecture-problems";
+import type { CycleBreak } from "../../architecture-problems";
 import type { ModuleDependencyGraph } from "../../graph-data/types";
 import type {
   LayoutRenderModel,
@@ -30,7 +30,6 @@ export interface ProjectWorkspace {
   layoutModel: LayoutRenderModel | null;
   layoutScope: LayoutScopeSummary | null;
   cycleBreaks: CycleBreak[];
-  selfDependencies: SelfDependency[];
   layoutError: string | null;
   error: InvokeError | null;
   loading: LoadingState;
