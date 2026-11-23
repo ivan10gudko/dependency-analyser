@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import "./shared/ui/styles/ui.css";
 
 import { AnalysisProvider } from "./features/analysis";
@@ -7,6 +9,16 @@ import { WorkbenchLayout } from "./features/workbench";
 
 function App() {
   const workspace = useProjectWorkspace();
+
+  useEffect(() => {
+    const preventContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("contextmenu", preventContextMenu, { capture: true });
+    return () => {
+      window.removeEventListener("contextmenu", preventContextMenu, { capture: true });
+    };
+  }, []);
 
   return (
     <GraphInteractionProvider

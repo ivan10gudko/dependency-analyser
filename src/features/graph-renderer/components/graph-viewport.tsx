@@ -6,10 +6,9 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 
-import { isBarrelNodeId } from "../../barrel-view";
+import { barrelFolderFromNodeId, isBarrelNodeId } from "../../barrel-view";
 import type { IssueHighlight } from "../../analysis";
 import {
   isHighlightedNodeState,
@@ -26,6 +25,7 @@ import {
 } from "../barrel-pointer-action";
 import { GraphRenderer } from "./graph-renderer";
 import {
+  resolveBarrelToggleTargetViewBox,
   resolveFocusFramePlan,
   type FocusFramePlan,
 } from "../utils/focus-viewport";
@@ -110,6 +110,13 @@ export function GraphViewport({
   const lastFramedFocusRef = useRef<string | null>(null);
   const lastBarrelTapRef = useRef<{ id: string; at: number } | null>(null);
   const pendingBarrelFocusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingBarrelToggleRef = useRef<{
+    barrelNodeId: string;
+    targetExpanded: boolean;
+    priorViewBox: ViewBoxRect;
+    previousLayout: LayoutRenderModel;
+  } | null>(null);
+  const revealOriginViewBoxRef = useRef<ViewBoxRect | null>(null);
   const focusFrameAnimationRef = useRef<number | null>(null);
   const focusRevealHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewFrameRef = useRef<number | null>(null);
@@ -124,8 +131,11 @@ export function GraphViewport({
   const seenBaseRef = useRef(baseViewBox);
   if (seenBaseRef.current !== baseViewBox) {
     seenBaseRef.current = baseViewBox;
-    viewBoxRef.current = baseViewBox;
-    lastFramedFocusRef.current = null;
+    if (!pendingBarrelToggleRef.current) {
+      viewBoxRef.current = baseViewBox;
+      lastFramedFocusRef.current = null;
+      revealOriginViewBoxRef.current = null;
+    }
   }
 
   const [offsetState, setOffsetState] = useState<{
@@ -151,7 +161,15 @@ export function GraphViewport({
     svg.setAttribute("viewBox", formatViewBox(viewBoxRef.current));
 
     const viewportWidth = viewportRef.current?.clientWidth ?? 0;
-    const detail = graphDetailLevel(viewBoxRef.current.width, viewportWidth);
+    const viewportHeight = viewportRef.current?.clientHeight ?? 0;
+    const detail = graphDetailLevel(
+      viewBoxRef.current.width,
+      viewportWidth,
+      undefined,
+      undefined,
+      viewBoxRef.current.height,
+      viewportHeight,
+    );
     if (svg.getAttribute("data-detail") === detail) return;
     svg.setAttribute("data-detail", detail);
   }, []);
@@ -185,7 +203,7 @@ export function GraphViewport({
     [baseViewBox],
   );
 
-  const cancelFocusFrameAnimation = useCallback(() => {
+  const cancelFocusFrameAnimation = useCallback((options?: { keepRevealOrigin?: boolean }) => {
     if (focusFrameAnimationRef.current !== null) {
       cancelAnimationFrame(focusFrameAnimationRef.current);
       focusFrameAnimationRef.current = null;
@@ -193,6 +211,9 @@ export function GraphViewport({
     if (focusRevealHoldTimerRef.current !== null) {
       clearTimeout(focusRevealHoldTimerRef.current);
       focusRevealHoldTimerRef.current = null;
+    }
+    if (!options?.keepRevealOrigin) {
+      revealOriginViewBoxRef.current = null;
     }
   }, []);
 
@@ -218,18 +239,22 @@ export function GraphViewport({
   );
 
   const runFocusFramePlan = useCallback(
-    (plan: FocusFramePlan) => {
-      cancelFocusFrameAnimation();
+    (plan: FocusFramePlan, revealOrigin?: ViewBoxRect) => {
+      cancelFocusFrameAnimation({ keepRevealOrigin: true });
 
       if (plan.mode === "direct") {
+        revealOriginViewBoxRef.current = null;
         animateViewBoxBetween(plan.prior, plan.target, FOCUS_FRAME_DIRECT_MS);
         return;
       }
 
+      revealOriginViewBoxRef.current = revealOrigin ?? plan.settle;
       animateViewBoxBetween(plan.prior, plan.overview, FOCUS_REVEAL_OUT_MS, () => {
         focusRevealHoldTimerRef.current = setTimeout(() => {
           focusRevealHoldTimerRef.current = null;
-          animateViewBoxBetween(plan.overview, plan.settle, FOCUS_REVEAL_IN_MS);
+          animateViewBoxBetween(plan.overview, plan.settle, FOCUS_REVEAL_IN_MS, () => {
+            revealOriginViewBoxRef.current = null;
+          });
         }, FOCUS_REVEAL_HOLD_MS);
       });
     },
@@ -275,6 +300,38 @@ export function GraphViewport({
   }, []);
 
   useEffect(() => {
+    const pendingToggle = pendingBarrelToggleRef.current;
+    if (pendingToggle) {
+      if (pendingToggle.previousLayout === layout) return;
+      pendingBarrelToggleRef.current = null;
+
+      const host = viewportRef.current;
+      if (host && host.clientWidth > 0 && host.clientHeight > 0) {
+        const aspect = host.clientWidth / host.clientHeight;
+        const target = resolveBarrelToggleTargetViewBox(
+          displayLayout,
+          pendingToggle.barrelNodeId,
+          pendingToggle.targetExpanded,
+          aspect,
+          pendingToggle.priorViewBox,
+        );
+        if (target) {
+          runFocusFramePlan({
+            mode: "direct",
+            prior: { ...viewBoxRef.current },
+            target: clampZoom(target),
+          });
+        }
+      }
+
+      if (focusedModuleId !== null && focusVisual?.active) {
+        lastFramedFocusRef.current = `${focusedModuleId}:${[...collectHighlightKeyParts(focusVisual)].join("|")}`;
+      } else {
+        lastFramedFocusRef.current = null;
+      }
+      return;
+    }
+
     if (focusedModuleId === null) {
       lastFramedFocusRef.current = null;
       return;
@@ -289,6 +346,9 @@ export function GraphViewport({
 
     const aspect = host.clientWidth / host.clientHeight;
     const prior = { ...viewBoxRef.current };
+    const settleScaleBase = revealOriginViewBoxRef.current
+      ? { ...revealOriginViewBoxRef.current }
+      : prior;
     const plan = resolveFocusFramePlan(
       displayLayout,
       focusVisual,
@@ -296,6 +356,7 @@ export function GraphViewport({
       focusedModuleId,
       prior,
       baseViewBox,
+      settleScaleBase,
     );
     if (!plan) return;
 
@@ -308,12 +369,21 @@ export function GraphViewport({
             settle: clampZoom(plan.settle),
           };
 
-    runFocusFramePlan(clampedPlan);
+    runFocusFramePlan(clampedPlan, settleScaleBase);
     lastFramedFocusRef.current = frameKey;
-  }, [baseViewBox, clampZoom, displayLayout, focusVisual, focusedModuleId, runFocusFramePlan]);
+  }, [
+    baseViewBox,
+    clampZoom,
+    displayLayout,
+    expandedBarrelDirectories,
+    focusVisual,
+    focusedModuleId,
+    layout,
+    runFocusFramePlan,
+  ]);
 
   const onWheel = useCallback(
-    (event: ReactWheelEvent<HTMLDivElement>) => {
+    (event: WheelEvent) => {
       event.preventDefault();
       cancelFocusFrameAnimation();
       const bounds = viewportRef.current?.getBoundingClientRect();
@@ -328,11 +398,17 @@ export function GraphViewport({
     [cancelFocusFrameAnimation, clampZoom, markWheeling, scheduleViewBox],
   );
 
+  useEffect(() => {
+    const host = viewportRef.current;
+    if (!host) return;
+    host.addEventListener("wheel", onWheel, { passive: false });
+    return () => host.removeEventListener("wheel", onWheel);
+  }, [onWheel]);
+
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
       event.preventDefault();
-      cancelFocusFrameAnimation();
       window.getSelection()?.removeAllRanges();
       viewportRef.current?.setPointerCapture(event.pointerId);
       dragRef.current = {
@@ -345,7 +421,7 @@ export function GraphViewport({
       };
       event.currentTarget.classList.add("is-panning");
     },
-    [cancelFocusFrameAnimation],
+    [],
   );
 
   const onNodePointerDown = useCallback(
@@ -354,7 +430,6 @@ export function GraphViewport({
       if (!moduleId) return;
 
       event.preventDefault();
-      cancelFocusFrameAnimation();
       window.getSelection()?.removeAllRanges();
       viewportRef.current?.setPointerCapture(event.pointerId);
       dragRef.current = {
@@ -368,7 +443,7 @@ export function GraphViewport({
       };
       viewportRef.current?.classList.add("is-dragging-node");
     },
-    [cancelFocusFrameAnimation],
+    [],
   );
 
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
@@ -377,6 +452,20 @@ export function GraphViewport({
 
     const bounds = viewportRef.current?.getBoundingClientRect();
     if (!bounds) return;
+
+    const dragDistance = Math.hypot(
+      event.clientX - drag.startX,
+      event.clientY - drag.startY,
+    );
+    const hasFocusAnimation =
+      focusFrameAnimationRef.current !== null ||
+      focusRevealHoldTimerRef.current !== null;
+    if (dragDistance < PAN_CLICK_THRESHOLD_PX && hasFocusAnimation) {
+      return;
+    }
+    if (dragDistance >= PAN_CLICK_THRESHOLD_PX) {
+      cancelFocusFrameAnimation();
+    }
 
     const deltaX = event.clientX - drag.x;
     const deltaY = event.clientY - drag.y;
@@ -408,7 +497,7 @@ export function GraphViewport({
     scheduleViewBox(
       panViewBoxByPixels(viewBoxRef.current, deltaX, deltaY, bounds.width, bounds.height),
     );
-  }, [scheduleViewBox]);
+  }, [cancelFocusFrameAnimation, scheduleViewBox]);
 
   const cancelPendingBarrelFocus = useCallback(() => {
     if (pendingBarrelFocusRef.current === null) return;
@@ -432,7 +521,21 @@ export function GraphViewport({
 
       if (result.action === "toggle") {
         cancelPendingBarrelFocus();
-        onToggleBarrelExpand?.(barrelNodeId);
+        if (onToggleBarrelExpand) {
+          const barrelDir = barrelFolderFromNodeId(barrelNodeId);
+          const currentlyExpanded =
+            barrelDir !== null && (expandedBarrelDirectories?.has(barrelDir) ?? false);
+          const priorViewBox = {
+            ...(revealOriginViewBoxRef.current ?? viewBoxRef.current),
+          };
+          pendingBarrelToggleRef.current = {
+            barrelNodeId,
+            targetExpanded: !currentlyExpanded,
+            priorViewBox,
+            previousLayout: layout,
+          };
+          onToggleBarrelExpand(barrelNodeId);
+        }
         return;
       }
 
@@ -443,7 +546,13 @@ export function GraphViewport({
         onFocusBarrel?.(barrelNodeId);
       }, BARREL_DOUBLE_CLICK_MS);
     },
-    [cancelPendingBarrelFocus, onFocusBarrel, onToggleBarrelExpand],
+    [
+      cancelPendingBarrelFocus,
+      expandedBarrelDirectories,
+      layout,
+      onFocusBarrel,
+      onToggleBarrelExpand,
+    ],
   );
 
   const finishPointer = useCallback(
@@ -457,7 +566,9 @@ export function GraphViewport({
 
       dragRef.current = null;
       viewportRef.current?.classList.remove("is-panning", "is-dragging-node");
-      viewportRef.current?.releasePointerCapture(event.pointerId);
+      if (viewportRef.current?.hasPointerCapture(event.pointerId)) {
+        viewportRef.current.releasePointerCapture(event.pointerId);
+      }
 
       if (drag.kind === "node") {
         if (distance < PAN_CLICK_THRESHOLD_PX) {
@@ -544,12 +655,11 @@ export function GraphViewport({
       <div
         ref={viewportRef}
         className="graph-viewport"
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={finishPointer}
-        onPointerLeave={finishPointer}
         onPointerCancel={finishPointer}
+        onLostPointerCapture={finishPointer}
         onDragStart={(event) => event.preventDefault()}
       >
         <GraphRenderer

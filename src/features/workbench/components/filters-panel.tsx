@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { ScrollArea } from "../../../shared/ui";
 import { useGraphInteraction } from "../../graph-interaction";
 import { collectDirectories } from "../../graph-filters";
 
@@ -20,7 +21,8 @@ export function FiltersPanel() {
   const directories = useMemo(() => collectDirectories(moduleIds), [moduleIds]);
 
   return (
-    <div className="wb-filters">
+    <ScrollArea className="wb-panel-scroll">
+      <div className="wb-filters">
       <p className="wb-view-intro">
         Hide modules from the graph. The file tree and problem list stay unchanged.
       </p>
@@ -56,6 +58,7 @@ export function FiltersPanel() {
         onAdd={addFileMasks}
         onRemove={removeFileMask}
       />
-    </div>
+      </div>
+    </ScrollArea>
   );
 }

@@ -4,11 +4,14 @@ import { DEFAULT_MODULE_NODE_SIZE } from "../../hierarchical-graph-layout";
 import {
   clampViewBoxZoom,
   formatViewBox,
+  getViewportMapping,
   GRAPH_DETAIL_MIN_NODE_PX,
   graphDetailLevel,
   MIN_VIEW_BOX_WIDTH,
   MIN_VIEW_WIDTH_RATIO,
+  panViewBoxByPixels,
   parseViewBox,
+  screenToViewPoint,
   wheelZoomScaleFactor,
   zoomViewBoxAt,
 } from "../utils/view-box";
@@ -25,6 +28,47 @@ describe("view-box", () => {
     expect(zoomed.width).toBe(50);
     expect(zoomed.x).toBe(25);
     expect(zoomed.y).toBe(25);
+  });
+
+  it("pans uniformly on both axes when a wide viewBox is letterboxed in a taller viewport", () => {
+    // 8000x500 viewBox in an 800x600 viewport -> uniform scale = 0.1 px/unit (10 units/px)
+    const rect = { x: 0, y: 0, width: 8000, height: 500 };
+    const panned = panViewBoxByPixels(rect, 50, 100, 800, 600);
+    expect(panned.x).toBeCloseTo(-500, 5);
+    expect(panned.y).toBeCloseTo(-1000, 5);
+  });
+
+  it("pans uniformly on both axes when a tall viewBox is pillarboxed in a wider viewport", () => {
+    // 500x4000 viewBox in an 800x400 viewport -> uniform scale = 0.1 px/unit (10 units/px)
+    const rect = { x: 0, y: 0, width: 500, height: 4000 };
+    const panned = panViewBoxByPixels(rect, 40, -25, 800, 400);
+    expect(panned.x).toBeCloseTo(-400, 5);
+    expect(panned.y).toBeCloseTo(250, 5);
+  });
+
+  it("maps screen points with letterbox offset so wheel zoom anchors under the cursor", () => {
+    // 8000x500 in 800x600 -> scale=0.1, rendered height=50, offsetY=(600-50)/2=275
+    const rect = { x: 0, y: 0, width: 8000, height: 500 };
+    const bounds = { left: 100, top: 50, width: 800, height: 600 };
+    const center = screenToViewPoint(rect, 100 + 400, 50 + 300, bounds);
+    expect(center.x).toBeCloseTo(4000, 5);
+    expect(center.y).toBeCloseTo(250, 5);
+
+    // Top edge of rendered viewBox is at localY = 275 -> svgY = 0
+    const topEdge = screenToViewPoint(rect, 100, 50 + 275, bounds);
+    expect(topEdge.x).toBeCloseTo(0, 5);
+    expect(topEdge.y).toBeCloseTo(0, 5);
+
+    // Verify zoom keeps screen point fixed under cursor
+    const mappingBefore = getViewportMapping(rect, bounds.width, bounds.height)!;
+    const focus = screenToViewPoint(rect, 100 + 250, 50 + 120, bounds);
+    const zoomed = zoomViewBoxAt(rect, 0.8, focus.x, focus.y);
+    const mappingAfter = getViewportMapping(zoomed, bounds.width, bounds.height)!;
+    const screenXAfter = mappingAfter.offsetX + (focus.x - zoomed.x) * mappingAfter.scale;
+    const screenYAfter = mappingAfter.offsetY + (focus.y - zoomed.y) * mappingAfter.scale;
+    expect(mappingBefore.scale).toBeCloseTo(0.1, 5);
+    expect(screenXAfter).toBeCloseTo(250, 5);
+    expect(screenYAfter).toBeCloseTo(120, 5);
   });
 });
 

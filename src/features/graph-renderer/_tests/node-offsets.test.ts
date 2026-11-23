@@ -60,4 +60,15 @@ describe("screenDeltaToViewDelta", () => {
       screenDeltaToViewDelta(10, 10, { x: 0, y: 0, width: 100, height: 100 }, 0, 0),
     ).toEqual({ dx: 0, dy: 0 });
   });
+
+  it("uses uniform SVG meet scale for vertical node drag in mismatched aspect ratios", () => {
+    const delta = screenDeltaToViewDelta(
+      10,
+      20,
+      { x: 0, y: 0, width: 8000, height: 500 },
+      800,
+      600,
+    );
+    expect(delta).toEqual({ dx: 100, dy: 200 });
+  });
 });

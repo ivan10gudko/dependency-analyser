@@ -28,7 +28,7 @@ export function FileInspectorPanel() {
   const stats = moduleFileStats.get(focusedModuleId);
 
   return (
-    <ScrollArea className="wb-inspector-root">
+    <ScrollArea className="wb-panel-scroll wb-inspector-root">
       <FileMetadataSection
         moduleId={focusedModuleId}
         stats={stats}

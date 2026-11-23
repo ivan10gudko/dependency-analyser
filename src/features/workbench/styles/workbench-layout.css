@@ -1,8 +1,10 @@
 .wb-root {
   display: flex;
   flex-direction: column;
+  flex: 1;
   height: 100%;
-  min-height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   overflow: hidden;
   background: var(--color-bg);
   color: var(--color-fg);
@@ -68,6 +70,7 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .wb-panel-slot {
@@ -82,6 +85,7 @@
 .wb-side-panel {
   display: flex;
   flex-direction: column;
+  flex: 1;
   height: 100%;
   min-height: 0;
   border-right: 1px solid var(--color-border);
@@ -175,6 +179,7 @@
 .wb-tree-scroll,
 .wb-panel-scroll {
   flex: 1;
+  min-height: 0;
 }
 
 .wb-tree-row {
@@ -204,11 +209,8 @@
 
 .wb-filters {
   display: flex;
-  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
-  min-height: 0;
-  overflow: auto;
   padding: 0.75rem;
 }
 
@@ -353,10 +355,6 @@
   overflow: auto;
   font-size: 10px;
   font-family: var(--font-mono);
-}
-
-.wb-inspector-root {
-  max-height: calc(100dvh - var(--size-menubar) - 4rem);
 }
 
 .wb-inspector-section {

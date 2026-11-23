@@ -1,6 +1,6 @@
 import type { LayoutRenderNode } from "../../hierarchical-graph-layout";
 
-import type { ViewBoxRect } from "./view-box";
+import { getViewportMapping, type ViewBoxRect } from "./view-box";
 
 export interface NodeOffset {
   dx: number;
@@ -32,10 +32,11 @@ export function screenDeltaToViewDelta(
   viewportWidth: number,
   viewportHeight: number,
 ): NodeOffset {
-  if (viewportWidth <= 0 || viewportHeight <= 0) return { dx: 0, dy: 0 };
+  const mapping = getViewportMapping(rect, viewportWidth, viewportHeight);
+  if (!mapping) return { dx: 0, dy: 0 };
 
   return {
-    dx: (deltaX / viewportWidth) * rect.width,
-    dy: (deltaY / viewportHeight) * rect.height,
+    dx: deltaX / mapping.scale,
+    dy: deltaY / mapping.scale,
   };
 }

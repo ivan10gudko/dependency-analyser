@@ -11,14 +11,52 @@ export const GRAPH_DETAIL_MIN_NODE_PX = 40;
 
 export type GraphDetailLevel = "full" | "overview";
 
+export interface ViewportMapping {
+  /** Uniform screen pixels per SVG unit under preserveAspectRatio="xMidYMid meet". */
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+export function getViewportMapping(
+  rect: ViewBoxRect,
+  viewportWidth: number,
+  viewportHeight: number,
+): ViewportMapping | null {
+  if (
+    viewportWidth <= 0 ||
+    viewportHeight <= 0 ||
+    rect.width <= 0 ||
+    rect.height <= 0
+  ) {
+    return null;
+  }
+
+  const scale = Math.min(viewportWidth / rect.width, viewportHeight / rect.height);
+  const offsetX = (viewportWidth - rect.width * scale) / 2;
+  const offsetY = (viewportHeight - rect.height * scale) / 2;
+  return { scale, offsetX, offsetY };
+}
+
 export function graphDetailLevel(
   viewBoxWidth: number,
   viewportClientWidth: number,
   nodeWidth = DEFAULT_MODULE_NODE_SIZE.width,
   minNodePx = GRAPH_DETAIL_MIN_NODE_PX,
+  viewBoxHeight?: number,
+  viewportClientHeight?: number,
 ): GraphDetailLevel {
   if (!(viewBoxWidth > 0) || !(viewportClientWidth > 0)) return "full";
-  const nodePx = (nodeWidth / viewBoxWidth) * viewportClientWidth;
+  let scale = viewportClientWidth / viewBoxWidth;
+  if (
+    viewBoxHeight !== undefined &&
+    viewportClientHeight !== undefined &&
+    viewBoxHeight > 0 &&
+    viewportClientHeight > 0
+  ) {
+    scale = Math.min(scale, viewportClientHeight / viewBoxHeight);
+  }
+  const nodePx = nodeWidth * scale;
   return nodePx >= minNodePx ? "full" : "overview";
 }
 
@@ -61,12 +99,13 @@ export function panViewBoxByPixels(
   viewportWidth: number,
   viewportHeight: number,
 ): ViewBoxRect {
-  if (viewportWidth <= 0 || viewportHeight <= 0) return rect;
+  const mapping = getViewportMapping(rect, viewportWidth, viewportHeight);
+  if (!mapping) return rect;
 
   return {
     ...rect,
-    x: rect.x - (deltaX / viewportWidth) * rect.width,
-    y: rect.y - (deltaY / viewportHeight) * rect.height,
+    x: rect.x - deltaX / mapping.scale,
+    y: rect.y - deltaY / mapping.scale,
   };
 }
 
@@ -74,13 +113,16 @@ export function screenToViewPoint(
   rect: ViewBoxRect,
   clientX: number,
   clientY: number,
-  bounds: DOMRect,
+  bounds: Pick<DOMRect, "left" | "top" | "width" | "height">,
 ): { x: number; y: number } {
+  const mapping = getViewportMapping(rect, bounds.width, bounds.height);
+  if (!mapping) return { x: rect.x, y: rect.y };
+
   const localX = clientX - bounds.left;
   const localY = clientY - bounds.top;
   return {
-    x: rect.x + (localX / bounds.width) * rect.width,
-    y: rect.y + (localY / bounds.height) * rect.height,
+    x: rect.x + (localX - mapping.offsetX) / mapping.scale,
+    y: rect.y + (localY - mapping.offsetY) / mapping.scale,
   };
 }
 

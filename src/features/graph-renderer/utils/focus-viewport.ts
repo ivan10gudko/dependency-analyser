@@ -1,8 +1,10 @@
+import { barrelFolderFromNodeId } from "../../barrel-view";
 import {
   isHighlightedNodeState,
   type GraphFocusVisual,
 } from "../../graph-interaction/types";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
+import { directoryOf } from "../../../lib/path";
 
 import { computeLayoutBounds } from "./layout-bounds";
 import { parseViewBox, type ViewBoxRect } from "./view-box";
@@ -160,6 +162,7 @@ export function resolveFocusFramePlan(
   focusNodeId: string,
   priorViewBox: ViewBoxRect,
   baseViewBox: ViewBoxRect,
+  settleScaleViewBox: ViewBoxRect = priorViewBox,
 ): FocusFramePlan | null {
   const overview = viewBoxForGraphFocus(layout, focusVisual, viewportAspect, focusNodeId);
   if (!overview) return null;
@@ -167,15 +170,61 @@ export function resolveFocusFramePlan(
   const highlightedIds = collectHighlightedModuleIds(focusVisual);
   const center = focusNodeCenterInLayout(layout, focusNodeId);
   const settle = center
-    ? viewBoxWithSameScaleCenteredOn(priorViewBox, center)
-    : { ...priorViewBox };
+    ? viewBoxWithSameScaleCenteredOn(settleScaleViewBox, center)
+    : { ...settleScaleViewBox };
 
   if (
     highlightedIds.size > 1 &&
-    shouldPlayFocusRevealAnimation(overview, priorViewBox, baseViewBox)
+    shouldPlayFocusRevealAnimation(overview, settleScaleViewBox, baseViewBox)
   ) {
     return { mode: "reveal", prior: priorViewBox, overview, settle };
   }
 
   return { mode: "direct", prior: priorViewBox, target: overview };
+}
+
+export function collectBarrelFolderNodeIds(
+  layout: LayoutRenderModel,
+  barrelNodeId: string,
+): Set<string> {
+  const ids = new Set<string>();
+  const barrelDir = barrelFolderFromNodeId(barrelNodeId);
+  for (const node of layout.nodes) {
+    if (node.isDummy) continue;
+    if (node.id === barrelNodeId) {
+      ids.add(node.id);
+      continue;
+    }
+    if (barrelDir !== null && directoryOf(node.id) === barrelDir) {
+      ids.add(node.id);
+    }
+  }
+  return ids;
+}
+
+export function resolveBarrelToggleTargetViewBox(
+  layout: LayoutRenderModel,
+  barrelNodeId: string,
+  expanded: boolean,
+  viewportAspect: number,
+  priorViewBox: ViewBoxRect,
+): ViewBoxRect | null {
+  if (expanded) {
+    const folderIds = collectBarrelFolderNodeIds(layout, barrelNodeId);
+    if (folderIds.size > 0) {
+      const padding = focusFitPaddingForCount(folderIds.size);
+      const content = contentBoundsForHighlight(layout, folderIds, padding);
+      if (content) {
+        return viewBoxToFitContent(
+          content,
+          viewportAspect,
+          paddingRatioForHighlightCount(folderIds.size),
+        );
+      }
+    }
+  }
+
+  const center = focusNodeCenterInLayout(layout, barrelNodeId);
+  if (!center) return null;
+  return viewBoxWithSameScaleCenteredOn(priorViewBox, center);
 }

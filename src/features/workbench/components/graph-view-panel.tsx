@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { Button, HelpHint, RangeInput, SelectField } from "../../../shared/ui";
+import { Button, HelpHint, RangeInput, ScrollArea, SelectField } from "../../../shared/ui";
 import {
   useGraphInteraction,
   type ConnectivityDepth,
@@ -77,7 +77,8 @@ export function GraphViewPanel() {
     connectivityDepth === "all" ? SLIDER_MAX : Math.min(SLIDER_MAX, connectivityDepth);
 
   return (
-    <div className="wb-view-panel">
+    <ScrollArea className="wb-panel-scroll">
+      <div className="wb-view-panel">
       <ViewSectionHeading
         title="Neighborhood"
         help="Controls which modules stay visible when a file is focused: direction of the walk and how many hops to include."
@@ -273,7 +274,8 @@ export function GraphViewPanel() {
           onRemove={removeLocationColorRule}
         />
       )}
-    </div>
+      </div>
+    </ScrollArea>
   );
 }
 
