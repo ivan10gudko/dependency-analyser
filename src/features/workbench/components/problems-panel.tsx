@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 
 import {
   CATEGORY_LABELS,
@@ -12,7 +12,7 @@ import {
 } from "../../analysis";
 import { mergeMasks } from "../../graph-filters";
 import { useGraphInteraction } from "../../graph-interaction";
-import { EmptyState, ListRow, ScrollArea } from "../../../shared/ui";
+import { EmptyState, ScrollArea } from "../../../shared/ui";
 import type { ProjectWorkspace } from "../../project/types/workspace";
 
 import { MaskField } from "./mask-field";
@@ -52,24 +52,28 @@ export function ProblemsPanel({ workspace }: ProblemsPanelProps) {
         <div className="wb-issues-filters" role="group" aria-label="Filter by severity">
           <FilterButton
             active={filter === "all"}
+            severity="all"
             label="All"
             count={report.issues.length}
             onClick={() => setFilter("all")}
           />
           <FilterButton
             active={filter === "error"}
+            severity="error"
             label="Errors"
             count={report.counts.error}
             onClick={() => setFilter("error")}
           />
           <FilterButton
             active={filter === "warning"}
+            severity="warning"
             label="Warnings"
             count={report.counts.warning}
             onClick={() => setFilter("warning")}
           />
           <FilterButton
             active={filter === "info"}
+            severity="info"
             label="Info"
             count={report.counts.info}
             onClick={() => setFilter("info")}
@@ -150,15 +154,29 @@ export function ProblemsPanel({ workspace }: ProblemsPanelProps) {
         )}
 
         {hasInvokeError && (
-          <ListRow tone="danger" mono>
-            {workspace.error!.kind}: {workspace.error!.message}
-          </ListRow>
+          <div className="wb-issues-system">
+            <IssueCard
+              severity="error"
+              selected={false}
+              onSelect={() => {}}
+              tabIndex={-1}
+            >
+              {workspace.error!.kind}: {workspace.error!.message}
+            </IssueCard>
+          </div>
         )}
 
         {hasLayoutError && (
-          <ListRow tone="danger" mono>
-            Layout: {workspace.layoutError}
-          </ListRow>
+          <div className="wb-issues-system">
+            <IssueCard
+              severity="error"
+              selected={false}
+              onSelect={() => {}}
+              tabIndex={-1}
+            >
+              Layout: {workspace.layoutError}
+            </IssueCard>
+          </div>
         )}
 
         {groups.map((group) => (
@@ -191,24 +209,27 @@ export function ProblemsPanel({ workspace }: ProblemsPanelProps) {
 
 function FilterButton({
   active,
+  severity,
   label,
   count,
   onClick,
 }: {
   active: boolean;
+  severity: SeverityFilter;
   label: string;
   count: number;
   onClick: () => void;
 }) {
+  const severityClass = ` wb-issues-filter--${severity}`;
   return (
     <button
       type="button"
-      className={active ? "wb-issues-filter is-active" : "wb-issues-filter"}
+      className={`wb-issues-filter${severityClass}${active ? " is-active" : ""}`}
       aria-pressed={active}
       onClick={onClick}
     >
       {label}
-      <span>{count}</span>
+      <span className="wb-issues-filter-count">{count}</span>
     </button>
   );
 }
@@ -222,25 +243,43 @@ function IssueRow({
   selected: boolean;
   onSelect: () => void;
 }) {
+  return (
+    <IssueCard severity={issue.severity} selected={selected} onSelect={onSelect}>
+      {issue.message}
+    </IssueCard>
+  );
+}
+
+function IssueCard({
+  severity,
+  selected,
+  onSelect,
+  tabIndex = 0,
+  children,
+}: {
+  severity: Severity;
+  selected: boolean;
+  onSelect: () => void;
+  tabIndex?: number;
+  children: ReactNode;
+}) {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (tabIndex < 0) return;
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     onSelect();
   };
 
   return (
-    <ListRow
-      tone={issue.severity === "error" ? "danger" : issue.severity === "warning" ? "warning" : "default"}
-      interactive
-      selected={selected}
-      mono
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
+    <div
+      role={tabIndex < 0 ? undefined : "button"}
+      tabIndex={tabIndex}
+      className={`wb-issue-card wb-issue-card--${severity}${selected ? " is-selected" : ""}`}
+      onClick={tabIndex < 0 ? undefined : onSelect}
       onKeyDown={onKeyDown}
     >
-      {issue.message}
-    </ListRow>
+      <span className="wb-issue-card__message">{children}</span>
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 import { cx } from "./utils";
 
-export type ButtonVariant = "primary" | "ghost" | "menu";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "menu";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -12,6 +12,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES = {
   primary: "ui-btn--primary",
+  secondary: "ui-btn--secondary",
   ghost: "ui-btn--ghost",
   menu: "ui-btn--menu",
 };

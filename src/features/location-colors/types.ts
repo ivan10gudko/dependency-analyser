@@ -9,6 +9,12 @@ export const LOCATION_COLOR_IDS = [
   "slate",
   "orange",
   "cyan",
+  "lime",
+  "pink",
+  "violet",
+  "sky",
+  "emerald",
+  "red",
 ] as const;
 
 export type LocationColorId = (typeof LOCATION_COLOR_IDS)[number];

@@ -17,7 +17,7 @@ import {
 import type { LocationColorId } from "../../location-colors";
 import type { LayoutRenderModel } from "../../hierarchical-graph-layout";
 
-import { Button } from "../../../shared/ui";
+import { Button, HelpHint, IconButton } from "../../../shared/ui";
 
 import {
   BARREL_DOUBLE_CLICK_MS,
@@ -401,13 +401,20 @@ export function GraphViewport({
   useEffect(() => {
     const host = viewportRef.current;
     if (!host) return;
-    host.addEventListener("wheel", onWheel, { passive: false });
-    return () => host.removeEventListener("wheel", onWheel);
+    host.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    return () => host.removeEventListener("wheel", onWheel, { capture: true });
   }, [onWheel]);
 
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(".graph-viewport-overlay, .graph-controls-pill, button, a")
+      ) {
+        return;
+      }
       event.preventDefault();
       window.getSelection()?.removeAllRanges();
       viewportRef.current?.setPointerCapture(event.pointerId);
@@ -611,47 +618,6 @@ export function GraphViewport({
 
   return (
     <div className="graph-viewport-shell">
-      <div className="graph-viewport-toolbar">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            zoomBy(wheelZoomScaleFactor(-TOOLBAR_WHEEL_DELTA_PX, 0))
-          }
-          aria-label="Zoom in"
-        >
-          +
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            zoomBy(wheelZoomScaleFactor(TOOLBAR_WHEEL_DELTA_PX, 0))
-          }
-          aria-label="Zoom out"
-        >
-          −
-        </Button>
-        <Button size="sm" variant="ghost" onClick={resetView}>
-          Reset
-        </Button>
-        {focusVisual?.active && !issueOnly && (
-          <span className="graph-focus-legend">
-            <span className="graph-focus-legend-item">
-              <span className="graph-focus-legend-swatch graph-focus-legend-swatch--descendant" />
-              Dependencies
-            </span>
-            <span className="graph-focus-legend-item">
-              <span className="graph-focus-legend-swatch graph-focus-legend-swatch--ancestor" />
-              Dependents
-            </span>
-          </span>
-        )}
-        <span className="graph-viewport-hint">
-          Коліщатко — zoom, фон — pan, вершина — перетягування
-        </span>
-      </div>
-
       <div
         ref={viewportRef}
         className="graph-viewport"
@@ -675,6 +641,61 @@ export function GraphViewport({
           expandedBarrelDirectories={expandedBarrelDirectories}
           onNodePointerDown={onNodePointerDown}
         />
+
+        <div
+          className="graph-viewport-overlay"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {focusVisual?.active && !issueOnly && (
+            <div className="graph-focus-legend-float">
+              <span className="graph-focus-legend-item">
+                <span className="graph-focus-legend-swatch graph-focus-legend-swatch--descendant" />
+                Dependencies
+              </span>
+              <span className="graph-focus-legend-item">
+                <span className="graph-focus-legend-swatch graph-focus-legend-swatch--ancestor" />
+                Dependents
+              </span>
+            </div>
+          )}
+          <div className="graph-controls-pill">
+            <IconButton
+              className="graph-controls-pill-btn"
+              label="Zoom in"
+              onClick={() =>
+                zoomBy(wheelZoomScaleFactor(-TOOLBAR_WHEEL_DELTA_PX, 0))
+              }
+            >
+              +
+            </IconButton>
+            <IconButton
+              className="graph-controls-pill-btn"
+              label="Zoom out"
+              onClick={() =>
+                zoomBy(wheelZoomScaleFactor(TOOLBAR_WHEEL_DELTA_PX, 0))
+              }
+            >
+              −
+            </IconButton>
+            <span className="graph-controls-divider" aria-hidden />
+            <Button
+              size="sm"
+              variant="ghost"
+              className="graph-controls-reset"
+              onClick={resetView}
+            >
+              Reset
+            </Button>
+            <HelpHint
+              label="Graph navigation"
+              content={
+                <>
+                  Коліщатко — zoom, фон — pan, вершина — перетягування
+                </>
+              }
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

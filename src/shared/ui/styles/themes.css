@@ -1,6 +1,16 @@
 :root,
 [data-theme="light"] {
   color-scheme: light;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 9999px;
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-blur: 12px;
+  --graph-canvas-dot-size: 1px;
+  --graph-canvas-dot-gap: 20px;
+  --color-graph-canvas-base: #f4f4f5;
+  --graph-canvas-dot: rgba(0, 0, 0, 0.12);
   --color-bg: #f3f3f3;
   --color-surface: #ffffff;
   --color-surface-muted: #f6f6f6;
@@ -15,9 +25,11 @@
   --color-warning: #9d5d00;
   --color-list-hover: rgba(0, 0, 0, 0.04);
   --color-menu-hover: #e8e8e8;
+  --color-scrollbar-thumb: rgba(0, 0, 0, 0.24);
+  --color-scrollbar-thumb-hover: rgba(0, 0, 0, 0.42);
   --color-overlay: rgba(255, 255, 255, 0.85);
-  --color-graph-canvas: #fafafa;
-  --color-graph-viewport: #eeeeee;
+  --color-graph-canvas: var(--color-graph-canvas-base);
+  --color-graph-viewport: var(--color-graph-canvas-base);
   --color-graph-edge: #7a8699;
   --color-graph-edge-hover: var(--color-accent);
   --color-graph-node-fill: #ffffff;
@@ -54,14 +66,30 @@
   --graph-zone-orange-fill: color-mix(in srgb, #ea580c 18%, var(--color-graph-node-fill));
   --graph-zone-cyan-stroke: #0891b2;
   --graph-zone-cyan-fill: color-mix(in srgb, #0891b2 18%, var(--color-graph-node-fill));
+  --graph-zone-lime-stroke: #65a30d;
+  --graph-zone-lime-fill: color-mix(in srgb, #84cc16 18%, var(--color-graph-node-fill));
+  --graph-zone-pink-stroke: #db2777;
+  --graph-zone-pink-fill: color-mix(in srgb, #ec4899 16%, var(--color-graph-node-fill));
+  --graph-zone-violet-stroke: #7c3aed;
+  --graph-zone-violet-fill: color-mix(in srgb, #8b5cf6 18%, var(--color-graph-node-fill));
+  --graph-zone-sky-stroke: #0284c7;
+  --graph-zone-sky-fill: color-mix(in srgb, #0ea5e9 18%, var(--color-graph-node-fill));
+  --graph-zone-emerald-stroke: #059669;
+  --graph-zone-emerald-fill: color-mix(in srgb, #10b981 18%, var(--color-graph-node-fill));
+  --graph-zone-red-stroke: #dc2626;
+  --graph-zone-red-fill: color-mix(in srgb, #ef4444 16%, var(--color-graph-node-fill));
   --color-tree-icon: #14c9e1;
   --size-menubar: 35px;
-  --font-ui: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-ui: "Inter Variable", Inter, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
+  --glass-bg: rgba(24, 24, 27, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --graph-canvas-dot: rgba(255, 255, 255, 0.08);
+  --color-graph-canvas-base: #09090b;
   --color-tree-icon: #14c9e1;
   --color-bg: #1e1e1e;
   --color-surface: #252526;
@@ -77,9 +105,11 @@
   --color-warning: #cca700;
   --color-list-hover: rgba(255, 255, 255, 0.06);
   --color-menu-hover: #2a2d2e;
+  --color-scrollbar-thumb: rgba(255, 255, 255, 0.24);
+  --color-scrollbar-thumb-hover: rgba(255, 255, 255, 0.42);
   --color-overlay: rgba(30, 30, 30, 0.88);
-  --color-graph-canvas: #1e1e1e;
-  --color-graph-viewport: #2a2a2a;
+  --color-graph-canvas: var(--color-graph-canvas-base);
+  --color-graph-viewport: var(--color-graph-canvas-base);
   --color-graph-edge: #8b949e;
   --color-graph-edge-hover: var(--color-accent);
   --color-graph-node-fill: #2d2d2d;
@@ -116,6 +146,18 @@
   --graph-zone-orange-fill: color-mix(in srgb, #f97316 22%, var(--color-graph-node-fill));
   --graph-zone-cyan-stroke: #22d3ee;
   --graph-zone-cyan-fill: color-mix(in srgb, #06b6d4 22%, var(--color-graph-node-fill));
+  --graph-zone-lime-stroke: #a3e635;
+  --graph-zone-lime-fill: color-mix(in srgb, #84cc16 22%, var(--color-graph-node-fill));
+  --graph-zone-pink-stroke: #f472b6;
+  --graph-zone-pink-fill: color-mix(in srgb, #ec4899 20%, var(--color-graph-node-fill));
+  --graph-zone-violet-stroke: #a78bfa;
+  --graph-zone-violet-fill: color-mix(in srgb, #8b5cf6 22%, var(--color-graph-node-fill));
+  --graph-zone-sky-stroke: #38bdf8;
+  --graph-zone-sky-fill: color-mix(in srgb, #0ea5e9 22%, var(--color-graph-node-fill));
+  --graph-zone-emerald-stroke: #34d399;
+  --graph-zone-emerald-fill: color-mix(in srgb, #10b981 22%, var(--color-graph-node-fill));
+  --graph-zone-red-stroke: #f87171;
+  --graph-zone-red-fill: color-mix(in srgb, #ef4444 20%, var(--color-graph-node-fill));
 }
 
 html,

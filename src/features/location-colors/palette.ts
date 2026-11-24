@@ -16,6 +16,12 @@ export const LOCATION_COLOR_SWATCHES: readonly LocationColorSwatch[] = [
   { id: "slate", label: "Slate" },
   { id: "orange", label: "Orange" },
   { id: "cyan", label: "Cyan" },
+  { id: "lime", label: "Lime" },
+  { id: "pink", label: "Pink" },
+  { id: "violet", label: "Violet" },
+  { id: "sky", label: "Sky" },
+  { id: "emerald", label: "Emerald" },
+  { id: "red", label: "Red" },
 ];
 
 export const DEFAULT_LOCATION_COLOR_ID: LocationColorId = "green";

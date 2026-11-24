@@ -134,18 +134,26 @@ export function GraphViewPanel() {
           setConnectivityDepth(next);
         }}
       />
-      <Button
-        variant={connectivityDepth === "all" ? "primary" : "ghost"}
-        size="sm"
-        onClick={() => setConnectivityDepth("all")}
-      >
-        Entire reachable set
-      </Button>
-      {focusedModuleId !== null && (
-        <Button variant="ghost" size="sm" onClick={() => clearFocus()}>
-          Reset focus
+      <div className="wb-view-actions">
+        <Button
+          variant={connectivityDepth === "all" ? "primary" : "secondary"}
+          size="sm"
+          className="wb-view-action-btn"
+          onClick={() => setConnectivityDepth("all")}
+        >
+          Entire reachable set
         </Button>
-      )}
+        {focusedModuleId !== null && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="wb-view-action-btn"
+            onClick={() => clearFocus()}
+          >
+            Reset focus
+          </Button>
+        )}
+      </div>
 
       <ViewSectionHeading title="Focus display" />
       <SelectField

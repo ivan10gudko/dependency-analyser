@@ -18,10 +18,12 @@ export function FileInspectorPanel() {
 
   if (focusedModuleId === null) {
     return (
-      <EmptyState
-        title="No file selected"
-        description="Select a file in the explorer or click a node in the graph."
-      />
+      <ScrollArea className="wb-panel-scroll">
+        <EmptyState
+          title="No file selected"
+          description="Select a file in the explorer or click a node in the graph."
+        />
+      </ScrollArea>
     );
   }
 

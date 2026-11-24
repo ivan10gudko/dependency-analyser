@@ -1,5 +1,5 @@
 import { useGraphInteraction } from "../../graph-interaction";
-import { EmptyState, Surface } from "../../../shared/ui";
+import { EmptyState, ScrollArea, Surface } from "../../../shared/ui";
 import { fileNameOf, toPosix } from "../../../lib/path";
 import type { ProjectWorkspace } from "../../project/types/workspace";
 
@@ -23,12 +23,14 @@ export function FileExplorerPanel({ workspace }: FileExplorerPanelProps) {
         Explorer · {title}
       </p>
       {workspace.fileModuleIds.length === 0 ? (
-        <EmptyState
-          title="No folder open"
-          description="Open a project to browse source files."
-          actionLabel="Open Project…"
-          onAction={() => void workspace.openProject()}
-        />
+        <ScrollArea className="wb-panel-scroll">
+          <EmptyState
+            title="No folder open"
+            description="Open a project to browse source files."
+            actionLabel="Open Project…"
+            onAction={() => void workspace.openProject()}
+          />
+        </ScrollArea>
       ) : (
         <FileTree
           moduleIds={workspace.fileModuleIds}

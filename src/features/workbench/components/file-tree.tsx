@@ -86,7 +86,7 @@ export function FileTree({ moduleIds, selectedPath, onSelectFile }: FileTreeProp
           <span className="wb-tree-icon">
             <FileTreeFileIcon fileName={node.name} />
           </span>
-          <span>{node.name}</span>
+          <span className="wb-tree-label">{node.name}</span>
         </ListRow>
       );
     }
@@ -104,7 +104,7 @@ export function FileTree({ moduleIds, selectedPath, onSelectFile }: FileTreeProp
           <span className="wb-tree-icon">
             <FileTreeFolderIcon open={isOpen} />
           </span>
-          <span>{node.name}</span>
+          <span className="wb-tree-label">{node.name}</span>
         </ListRow>
         {isOpen &&
           (node.children ?? []).map((child) => renderNode(child, depth + 1))}
