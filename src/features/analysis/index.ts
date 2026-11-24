@@ -2,6 +2,7 @@ export { AnalysisProvider, useAnalysis, type AnalysisProviderProps } from "./ana
 export { runAnalysis } from "./engine";
 export { buildIssueHighlight, buildIssueFocusVisual, type IssueHighlight } from "./issue-highlight";
 export { analysisAnalyzers } from "./rules";
+export { fsdLayerPreset } from "./rules/fsd-preset";
 export {
   DEFAULT_FAN_IN_THRESHOLD,
   DEFAULT_FAN_OUT_THRESHOLD,
@@ -21,6 +22,7 @@ export {
   type AnalysisIssue,
   type AnalysisReport,
   type AnalysisSettings,
+  type ArchitectureLayer,
   type Analyzer,
   type FsdStatus,
   type IssueCategory,

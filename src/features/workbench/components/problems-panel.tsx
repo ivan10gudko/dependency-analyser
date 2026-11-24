@@ -15,6 +15,7 @@ import { useGraphInteraction } from "../../graph-interaction";
 import { EmptyState, ScrollArea } from "../../../shared/ui";
 import type { ProjectWorkspace } from "../../project/types/workspace";
 
+import { LayerRulesField } from "./layer-rules-field";
 import { MaskField } from "./mask-field";
 
 type SeverityFilter = "all" | Severity;
@@ -34,6 +35,7 @@ export function ProblemsPanel({ workspace }: ProblemsPanelProps) {
     setFanInThreshold,
     setFanOutThreshold,
     setEntryPointMasks,
+    setLayers,
   } = useAnalysis();
   const { moduleIds } = useGraphInteraction();
   const [filter, setFilter] = useState<SeverityFilter>("all");
@@ -85,13 +87,13 @@ export function ProblemsPanel({ workspace }: ProblemsPanelProps) {
         <details className="wb-issues-rules">
           <summary>Rules</summary>
           <div className="wb-issues-rules-body">
-          <p className="wb-issues-fsd">
-            {!workspace.dependencyGraph
-              ? "Open a project to analyze dependencies."
-              : fsdStatus.active
-                ? `FSD layers detected: ${fsdStatus.layers.join(", ")}.`
-                : "FSD preset inactive: fewer than two layers."}
-          </p>
+          <LayerRulesField
+            layers={settings.layers}
+            paths={moduleIds}
+            matchedLayers={fsdStatus.matchedLayers}
+            projectOpen={workspace.dependencyGraph != null}
+            onChange={setLayers}
+          />
           {RULE_IDS.map((ruleId) => (
             <label key={ruleId} className="wb-view-toggle">
               <input

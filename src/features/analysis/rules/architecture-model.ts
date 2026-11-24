@@ -1,6 +1,9 @@
 import type { ModuleDependencyGraph } from "../../graph-data/types";
 import type { ModuleId } from "../../project/types";
 
+import { locateModuleLayer } from "./fsd-preset";
+import type { ArchitectureLayer } from "../types";
+
 export interface ArchitecturePlacement {
   layer: string;
   rank: number;
@@ -27,6 +30,26 @@ export type ArchitectureViolation =
       importer: ArchitecturePlacement;
       target: ArchitecturePlacement;
     };
+
+export function buildArchitectureModel(
+  graph: ModuleDependencyGraph,
+  layers: readonly ArchitectureLayer[],
+): ArchitectureModel {
+  const placements = new Map<ModuleId, ArchitecturePlacement>();
+  const present = new Set<string>();
+
+  for (const moduleId of graph.nodes.keys()) {
+    const place = locateModuleLayer(moduleId, layers);
+    if (!place) continue;
+    placements.set(moduleId, place);
+    present.add(place.layer);
+  }
+
+  return {
+    placements,
+    layers: layers.map((layer) => layer.name).filter((name) => present.has(name)),
+  };
+}
 
 export function findArchitectureViolations(
   graph: ModuleDependencyGraph,

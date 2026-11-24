@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { fsdLayerPreset } from "../rules/fsd-preset";
 import {
   defaultAnalysisSettings,
   loadAnalysisSettings,
@@ -25,6 +26,25 @@ describe("parseAnalysisSettings", () => {
     expect(parsed.fanInThreshold).toBe(10);
     expect(parsed.fanOutThreshold).toBe(4);
     expect(parsed.entryPointMasks).toEqual(["src/boot.ts"]);
+    expect(parsed.layers).toEqual(fsdLayerPreset());
+  });
+
+  it("keeps an edited layer list and drops invalid rows", () => {
+    const parsed = parseAnalysisSettings({
+      layers: [
+        { name: " ui ", mask: " src/ui/** ", sliced: true },
+        { name: "", mask: "src/empty/**", sliced: true },
+        { name: "ui", mask: "src/ui/**", sliced: false },
+        { name: "other", mask: "src/ui/**", sliced: true },
+        "features",
+      ],
+    });
+
+    expect(parsed.layers).toEqual([{ name: "ui", mask: "src/ui/**", sliced: true }]);
+  });
+
+  it("treats an explicit empty layer list as no layers", () => {
+    expect(parseAnalysisSettings({ layers: [] }).layers).toEqual([]);
   });
 });
 

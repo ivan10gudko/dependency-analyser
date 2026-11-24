@@ -19,7 +19,14 @@ import {
   loadAnalysisSettings,
   saveAnalysisSettings,
 } from "./settings";
-import type { AnalysisIssue, AnalysisReport, AnalysisSettings, FsdStatus, RuleId } from "./types";
+import type {
+  AnalysisIssue,
+  AnalysisReport,
+  AnalysisSettings,
+  ArchitectureLayer,
+  FsdStatus,
+  RuleId,
+} from "./types";
 
 const EMPTY_REPORT: AnalysisReport = {
   issues: [],
@@ -37,6 +44,7 @@ interface AnalysisContextValue {
   setFanInThreshold: (value: number) => void;
   setFanOutThreshold: (value: number) => void;
   setEntryPointMasks: (masks: readonly string[]) => void;
+  setLayers: (layers: readonly ArchitectureLayer[]) => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextValue | null>(null);
@@ -73,8 +81,11 @@ export function AnalysisProvider({
   }, [dependencyGraph, settings]);
 
   const fsdStatus = useMemo(
-    () => (dependencyGraph ? detectFsdStatus(dependencyGraph) : { active: false, layers: [] }),
-    [dependencyGraph],
+    () =>
+      dependencyGraph
+        ? detectFsdStatus(dependencyGraph, settings.layers)
+        : { matchedLayers: [] },
+    [dependencyGraph, settings.layers],
   );
 
   const updateSettings = useCallback(
@@ -148,6 +159,12 @@ export function AnalysisProvider({
     [updateSettings],
   );
 
+  const setLayers = useCallback(
+    (layers: readonly ArchitectureLayer[]) =>
+      updateSettings((current) => ({ ...current, layers })),
+    [updateSettings],
+  );
+
   const value = useMemo<AnalysisContextValue>(
     () => ({
       report,
@@ -160,6 +177,7 @@ export function AnalysisProvider({
       setFanInThreshold,
       setFanOutThreshold,
       setEntryPointMasks,
+      setLayers,
     }),
     [
       report,
@@ -172,6 +190,7 @@ export function AnalysisProvider({
       setFanInThreshold,
       setFanOutThreshold,
       setEntryPointMasks,
+      setLayers,
     ],
   );
 

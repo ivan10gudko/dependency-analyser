@@ -1,14 +1,12 @@
 import type { ModuleId } from "../../project/types";
 
-import { findArchitectureViolations } from "./architecture-model";
-import { buildFsdModel } from "./fsd-preset";
+import { buildArchitectureModel, findArchitectureViolations } from "./architecture-model";
 import type { Analyzer } from "../types";
 
 export const fsdLayerAnalyzer: Analyzer = {
   id: "fsd-layer",
-  run({ graph }) {
-    const model = buildFsdModel(graph);
-    if (!model) return [];
+  run({ graph, settings }) {
+    const model = buildArchitectureModel(graph, settings.layers);
 
     return findArchitectureViolations(graph, model)
       .filter((violation) => violation.kind === "layer")
@@ -29,9 +27,8 @@ export const fsdLayerAnalyzer: Analyzer = {
 
 export const fsdCrossSliceAnalyzer: Analyzer = {
   id: "fsd-cross-slice",
-  run({ graph }) {
-    const model = buildFsdModel(graph);
-    if (!model) return [];
+  run({ graph, settings }) {
+    const model = buildArchitectureModel(graph, settings.layers);
 
     return findArchitectureViolations(graph, model)
       .filter((violation) => violation.kind === "cross-slice")

@@ -872,6 +872,184 @@
   color: var(--color-fg-muted);
 }
 
+.wb-layer-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.wb-layer-rules .wb-view-section-heading {
+  margin: 0;
+}
+
+.wb-layer-stack {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.wb-layer-stack-item {
+  margin: 0;
+  padding: 0;
+}
+
+.wb-layer-card {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.35rem 0.45rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  transition:
+    box-shadow 0.15s ease,
+    opacity 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.wb-layer-card.is-dragging {
+  opacity: 0.45;
+}
+
+.wb-layer-card.is-drop-target {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+.wb-layer-card.is-matched {
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+}
+
+.wb-layer-drag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-fg-muted);
+  cursor: grab;
+}
+
+.wb-layer-drag:hover {
+  background: var(--color-list-hover);
+  color: var(--color-fg);
+}
+
+.wb-layer-drag:active {
+  cursor: grabbing;
+}
+
+.wb-layer-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.wb-layer-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.wb-layer-name {
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-layer-mask {
+  display: block;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-layer-sliced {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-fg-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.wb-layer-sliced input {
+  margin: 0;
+}
+
+.wb-layer-sliced--editor {
+  grid-column: 1 / -1;
+}
+
+.wb-layer-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.05rem;
+}
+
+.wb-layer-empty {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+}
+
+.wb-layer-empty p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+  line-height: 1.45;
+}
+
+.wb-layer-editor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-md);
+}
+
+.wb-layer-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.wb-layer-editor-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wb-layer-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
 .wb-issues-thresholds {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

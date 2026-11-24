@@ -46,11 +46,18 @@ export interface AnalysisIssue {
   primaryModuleId: ModuleId | null;
 }
 
+export interface ArchitectureLayer {
+  name: string;
+  mask: string;
+  sliced: boolean;
+}
+
 export interface AnalysisSettings {
   enabledRules: Record<RuleId, boolean>;
   fanInThreshold: number;
   fanOutThreshold: number;
   entryPointMasks: readonly string[];
+  layers: readonly ArchitectureLayer[];
 }
 
 export interface AnalyzerContext {
@@ -75,8 +82,7 @@ export interface AnalysisReport {
 }
 
 export interface FsdStatus {
-  active: boolean;
-  layers: readonly string[];
+  matchedLayers: readonly string[];
 }
 
 export const CATEGORY_LABELS: Record<IssueCategory, string> = {
@@ -95,7 +101,7 @@ export const RULE_LABELS: Record<RuleId, string> = {
   "unused-module": "Unused modules",
   "unreachable-module": "Unreachable modules",
   "high-coupling": "High coupling",
-  "fsd-layer": "FSD layer direction",
-  "fsd-cross-slice": "FSD cross-slice imports",
+  "fsd-layer": "Layer direction",
+  "fsd-cross-slice": "Cross-slice imports",
   "public-api": "Public API bypass",
 };

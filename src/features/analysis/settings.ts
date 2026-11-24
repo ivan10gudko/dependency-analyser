@@ -1,6 +1,7 @@
 import { normalizeMasks } from "../graph-filters";
 
-import { RULE_IDS, type AnalysisSettings, type RuleId } from "./types";
+import { fsdLayerPreset } from "./rules/fsd-preset";
+import { RULE_IDS, type AnalysisSettings, type ArchitectureLayer, type RuleId } from "./types";
 
 const STORAGE_KEY_PREFIX = "dependency-analyser.analysis.";
 
@@ -15,6 +16,7 @@ export function defaultAnalysisSettings(): AnalysisSettings {
     fanInThreshold: DEFAULT_FAN_IN_THRESHOLD,
     fanOutThreshold: DEFAULT_FAN_OUT_THRESHOLD,
     entryPointMasks: [],
+    layers: fsdLayerPreset(),
   };
 }
 
@@ -36,6 +38,7 @@ export function parseAnalysisSettings(value: unknown): AnalysisSettings {
     fanInThreshold: positiveInt(raw.fanInThreshold, defaults.fanInThreshold),
     fanOutThreshold: positiveInt(raw.fanOutThreshold, defaults.fanOutThreshold),
     entryPointMasks: normalizeMasks(stringList(raw.entryPointMasks)),
+    layers: parseLayers(raw.layers),
   };
 }
 
@@ -70,4 +73,24 @@ function positiveInt(value: unknown, fallback: number): number {
 function stringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function parseLayers(value: unknown): ArchitectureLayer[] {
+  if (!Array.isArray(value)) return fsdLayerPreset();
+
+  const layers: ArchitectureLayer[] = [];
+  const names = new Set<string>();
+  const masks = new Set<string>();
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const raw = item as Record<string, unknown>;
+    if (typeof raw.name !== "string" || typeof raw.mask !== "string") continue;
+    const name = raw.name.trim();
+    const mask = raw.mask.trim();
+    if (!name || !mask || names.has(name) || masks.has(mask)) continue;
+    names.add(name);
+    masks.add(mask);
+    layers.push({ name, mask, sliced: raw.sliced === true });
+  }
+  return layers;
 }
